@@ -175,6 +175,21 @@ dialog.course::backdrop { background: rgba(0, 0, 0, .45); }
 .course-part.pro { opacity: .62; }
 .course-part.pro h3 { color: var(--muted); }
 .course-level { margin: 0; font-size: 13px; color: var(--muted); }
+.path { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 10px 12px; }
+.path h3 { margin: 0 0 6px; font-size: 15px; }
+.path > p { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+.path ol { list-style: none; margin: 0; padding: 0; }
+.path li { position: relative; padding: 0 0 10px 28px; }
+.path li:not(:last-child)::before { content: ''; position: absolute; left: 8px; top: 20px; bottom: 2px; width: 2px; background: var(--line); }
+.path .ring { position: absolute; left: 0; top: 1px; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--muted); box-sizing: border-box; font-size: 11px; line-height: 14px; text-align: center; color: var(--panel); }
+.path .done .ring { background: var(--ok); border-color: var(--ok); }
+.path .here .ring { background: var(--accent); border-color: var(--accent); }
+.path .pro { opacity: .7; }
+.path b small { font-weight: 500; color: var(--accent); margin-left: 6px; }
+.path .done b small { color: var(--ok); }
+.path p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.path .parts { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; margin-top: 2px; }
+.path .parts a { color: var(--ink); }
 .course-level b { color: var(--ink); }
 .next-card { border: 1px solid var(--accent); border-radius: 8px; background: var(--bg); padding: 10px 12px; display: grid; gap: 8px; }
 .next-card h3 { margin: 0; font-size: 15px; }
@@ -8246,6 +8261,27 @@ registerProcessor('patch-school', Proc);`;
     12: ['West Coast and feedback (Level 4)', 'The Buchla way: complex oscillators, low-pass gates, wavefolding, a Krell patch and feedback loops.', 4],
     13: ['Performance (Level 4)', 'Macros with a job each, MIDI learn, scenes and a four-minute plan, a live take, Capstone B: a performance, and the Level 4 check.', 6]
   };
+  // Your path: the course as one story, in the plugin's five stretches
+  // (Lessons::path()). Level 1 is Parts 1 to 3; Parts 4 to 7 put it to work,
+  // free; then Pro's Levels 2, 3 and 4, in the app. A Pro stretch has its
+  // lesson count and time from the plugin (the web course is the free one).
+  const PATH = [
+    { name: 'Level 1: Patching', parts: [1, 2, 3], ends: 'm_level1',
+      about: 'How patching works, the modules every sound is made from, deeper synthesis, and rhythm and patterns.',
+      proves: 'the Level 1 check: build a voice from a blank rack, mend a broken patch and name ten sounds by ear, in fifteen minutes.' },
+    { name: 'Put it to work (free)', parts: [4, 5, 6, 7], ends: 'p6_score',
+      about: 'Sound recipes, from patch to track, and a whole lofi track of your own. Part 4’s later recipes and Part 7’s module workshops are extras: take any, in any order.',
+      proves: '6.9, Score your track: your first track, scored on Capstone A’s eight lines.' },
+    { name: 'Level 2: Sound designer (Pro)', parts: [8], pro: [27, 370],
+      about: 'Modulation as a design skill, sound briefs built by ear, harder fix-its and ear tests.',
+      proves: 'the Level 2 check: build two sounds to a client’s brief by ear, mend a patch with two faults and name fifteen sounds, in thirty minutes.' },
+    { name: 'Level 3: Track maker (Pro)', parts: [9], pro: [4, 270],
+      about: 'Mixing a song of your own: gain, low end and space.',
+      proves: 'Capstone A: an original track of your own, scored on eight lines.' },
+    { name: 'Level 4: Beyond the app (Pro)', parts: [10, 11, 12, 13], pro: [31, 567],
+      about: 'Hardware and Eurorack volts, generative patching, West Coast synthesis and performance.',
+      proves: 'the Level 4 check: build from a hardware patch sheet and under a hardware rule, and answer ten hardware questions, in twenty-five minutes. Capstones C and B, a piece that plays itself and a performance, show the rest.' }
+  ];
   // The Patch School Pro page, once it is up (empty: no link, "goes on sale soon").
   const PRO_URL = '';
   // About how long a lesson takes, in minutes: the same rule as the plugin's
@@ -8255,7 +8291,7 @@ registerProcessor('patch-school', Proc);`;
   function lessonMinutes(l) {
     if (l.info) return 5;
     if (l.mastery) return l.mastery.minutes + 5;
-    if (l.ear) return l.steps.length + 2;
+    if (l.ear) return (l.served || l.steps.length) + 2;
     if (l.challenge) return 10;
     return Math.max(5, Math.floor((l.steps.length * 2 + 2) / 5) * 5);
   }
@@ -9494,6 +9530,45 @@ registerProcessor('patch-school', Proc);`;
   }
 
   // ---------- course map ----------
+  // The Your path card at the top of the Course map: each stretch, how far
+  // through it you are, and what ends it. "You are here" is the stretch of
+  // the lesson Continue would open.
+  function pathCard() {
+    const close = () => $('#courseMap').close();
+    const next = LESSONS.find((l) => !l.info && !lessonDone(l) && !isExtra(l));
+    const here = next ? PATH.findIndex((s) => s.parts.includes(next.part)) : -1;
+    return h('section', { class: 'path', 'aria-label': 'Your path' }, h('h3', {}, 'Your path'),
+      h('p', {}, 'Level 1 is Parts 1 to 3, and ends with the Level 1 check. Parts 4 to 7 put it to work, free. Patch School Pro goes on in the app with Levels 2, 3 and 4.'),
+      h('ol', {}, PATH.map((s, i) => {
+        let counts, finished = false;
+        if (s.pro) counts = `${s.pro[0]} lessons, ${durationText(s.pro[1])} · Pro, in the app`;
+        else {
+          const list = LESSONS.filter((l) => s.parts.includes(l.part));
+          const core = list.filter((l) => !isExtra(l)), extra = list.filter(isExtra);
+          const [done, of] = courseCount(core), [xd, xof] = courseCount(extra);
+          const ends = LESSONS.find((l) => l.id === s.ends);
+          finished = !!ends && lessonDone(ends);
+          const left = core.filter((l) => !l.info && !lessonDone(l)).reduce((t, l) => t + lessonMinutes(l), 0);
+          counts = done >= of ? `all ${of} done` : done ? `${done} of ${of} done, ${durationText(left)} left`
+            : `${of} lessons, ${durationText(core.reduce((t, l) => t + lessonMinutes(l), 0))}`;
+          if (xof) counts += `; extras ${xd} of ${xof}, ${durationText(extra.reduce((t, l) => t + lessonMinutes(l), 0))}`;
+        }
+        const status = finished ? (s.ends.startsWith('m_') ? 'passed' : 'done') : i === here ? 'you are here' : '';
+        const parts = s.parts.map((p) => {
+          const name = (PARTS[p] || PRO_PARTS[p] || [''])[0].replace(/ \(.*\)$/, '');
+          if (s.pro) return h('span', {}, `Part ${p}: ${name}`);
+          const list = LESSONS.filter((l) => l.part === p);
+          const go = list.find((l) => !l.info && !lessonDone(l)) || list[0];
+          return go ? h('a', { href: lessonHash(go), onclick: close }, `Part ${p}: ${name}`) : null;
+        });
+        return h('li', { class: [finished ? 'done' : '', i === here ? 'here' : '', s.pro ? 'pro' : ''].join(' ').trim() || null },
+          h('span', { class: 'ring', 'aria-hidden': 'true' }, finished ? '✓' : ''),
+          h('b', {}, s.name, status ? h('small', {}, status) : null),
+          h('p', {}, `${s.about} ${counts}.`),
+          h('div', { class: 'parts' }, parts),
+          h('p', {}, h('b', {}, 'Ends with '), s.proves));
+      })));
+  }
   function courseTotals() {
     const [core, coreOf] = courseCount(LESSONS.filter((l) => !isExtra(l)));
     const [recipes, recipesOf] = courseCount(LESSONS.filter((l) => l.optional));
@@ -9507,7 +9582,7 @@ registerProcessor('patch-school', Proc);`;
       h('div', { class: 'course-head' },
         h('div', {}, h('p', { class: 'eyebrow' }, 'Patch School'), h('h2', { id: 'courseTitle' }, 'Course map'), h('p', { class: 'hint' }, courseTotals())),
         h('button', { type: 'button', class: 'btn small', 'aria-label': 'Close the course map', onclick: close }, '✕')),
-      h('div', { class: 'course-body' }, Object.entries(PARTS).map(([p, [name, blurb]]) => {
+      h('div', { class: 'course-body' }, pathCard(), Object.entries(PARTS).map(([p, [name, blurb]]) => {
         const list = LESSONS.filter((l) => l.part === +p), [done, of] = courseCount(list.filter((l) => !l.optional));
         const [extra, extraOf] = courseCount(list.filter((l) => l.optional));
         return h('section', { class: 'course-part', 'aria-label': `Part ${p}: ${name}` },
