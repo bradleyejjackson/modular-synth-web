@@ -4348,9 +4348,10 @@ Object.assign(IMPL, {
   const started = saved.started || {};
   const results = saved.results || {}; // challenges' and ear tests' best tries: id -> [points, seconds]
   const checkRecs = saved.checks || {}; // the Level 1 check: id -> { built, fixed, heard, seconds, tries, passedOn }
+  const selfScores = saved.selfScores || {}; // a score sheet's lines (6.9): id -> [0 to 3, or -1 per step], kept here only, like the app's
   let activeLesson = saved.active || 'l0';
   let saveTimer = 0;
-  const save = () => { noteUndo(); clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { localStorage.setItem(STORE, JSON.stringify({ lab, progress, started, results, checks: checkRecs, active: activeLesson, flags, chords, song, editing, labStash, labTrack })); } catch (e) { /* storage blocked: nothing to keep */ } }, 300); };
+  const save = () => { noteUndo(); clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { localStorage.setItem(STORE, JSON.stringify({ lab, progress, started, results, checks: checkRecs, selfScores, active: activeLesson, flags, chords, song, editing, labStash, labTrack })); } catch (e) { /* storage blocked: nothing to keep */ } }, 300); };
 
   // ---------- the patch ----------
   let lab = { mods: [], cables: [], next: 1 };
@@ -7841,6 +7842,43 @@ registerProcessor('patch-school', Proc);`;
       { t: "Quick check", quiz: {"q": "What makes an \"ah\" sound different from an \"oo\"?", "choices": ["The note being sung", "How loud it is", "Its formants: the bands of frequencies the mouth shape boosts", "The reverb"], "answer": 2, "why": "Each vowel is a mouth shape, and each mouth shape boosts its own bands of frequencies whatever note you sing."} },
       { t: "Save it", h: "Choose <b class=\"m\">Save as...</b> in the <b class=\"m\">Patch</b> menu above the patch and save it as <b class=\"m\">Choir pad</b>. Hold wide chords and let the vowels drift.", manual: true, where: "synth" },
     ] },
+    { id: "c4_keys", part: 4, num: "4.19", title: "Challenge: late-night keys", intro: "A producer making a late-night study playlist wants keys that sound like a worn cassette: a soft electric piano that answers your touch, dull at the top, with a slow wobble in its pitch.", how: [], challenge: true, hints: ["Think back to the lofi keys recipe (4.1): a piano sound, then what old tape and old records did to it.", "Two <b class=\"m\">FM Operators</b> make the piano, MIDI In's <b class=\"o\">Velocity</b> into a <b class=\"m\">VCA</b>'s <b class=\"i\">CV 2</b> makes it answer your touch, a <b class=\"m\">Filter</b> takes the top off, and a <b class=\"m\">Tape</b> adds the wobble.", "FM Operator into a VCA opened by an Envelope (Decay about 1.5 s, Sustain about 0.3), Velocity to VCA <b class=\"i\">CV 2</b>, VCA into a Filter (<b class=\"o\">LP</b>, Cutoff about 1800 Hz), Filter into a Tape with <b class=\"m\">Wow</b> about 0.5, Tape to the Output."], steps: [
+      { t: "You can play it", h: "Each key plays a note at its own pitch, and the note stops when you let go of the key.", check: () => GOALS["c4_keys|You can play it"](), apply: () => runDiff({"ensure": [["car", "fmOperator", 252, 20, {"index": 1.5}, false], ["mod", "fmOperator", 252, 380, {"index": 0.0}, false], ["vca", "vca", 484, 20, {"gain": 0.7}, false], ["env", "envelope", 484, 380, {"attack": 0.002, "decay": 1.5, "sustain": 0.3, "release": 0.6}, false]], "link": [["midi", "pitch", "car", "pitch"], ["midi", "pitch", "mod", "pitch"], ["mod", "out", "car", "pm"], ["car", "out", "vca", "in"], ["vca", "out", "out", "left"], ["midi", "gate", "env", "gate"], ["env", "out", "vca", "cv1"]]}) },
+      { t: "It answers your touch", h: "How hard you play sets how loud each note is.", check: () => GOALS["c4_keys|It answers your touch"](), apply: () => runDiff({"link": [["midi", "velocity", "vca", "cv2"]]}) },
+      { t: "Dull at the top", h: "Like an old recording, it goes through a low-pass filter with its cutoff at 2500 Hz or lower.", check: () => GOALS["c4_keys|Dull at the top"](), apply: () => runDiff({"ensure": [["flt", "filter", 716, 20, {"cutoff": 1800.0, "resonance": 0.1}, false]], "link": [["vca", "out", "flt", "in"], ["flt", "lowPass", "out", "left"]]}) },
+      { t: "A wobble like tape", h: "Its pitch sways slowly: it goes through a Tape with Wow at 0.3 or more, or something slow wobbles its pitch.", check: () => GOALS["c4_keys|A wobble like tape"](), apply: () => runDiff({"ensure": [["tape", "tape", 948, 20, {"wow": 0.5, "saturation": 0.4}, true]], "link": [["flt", "lowPass", "tape", "in"], ["tape", "out", "out", "left"]]}) },
+    ] },
+    { id: "c4_beat", part: 4, num: "4.20", title: "Challenge: a dusty beat", intro: "A lofi rapper needs a beat to write over: kick, snare and hats from a pattern, leaning back rather than marching, crunchy and a little muffled, like a sample from an old record.", how: [], challenge: true, hints: ["Think back to the dusty drums recipe (4.2): a pattern, three drum sounds, then what makes it lazy and what makes it old.", "A <b class=\"m\">Trigger Grid</b> plays a <b class=\"m\">Drum Sampler</b> (or drum modules). Its <b class=\"m\">Swing</b>, or a <b class=\"m\">Humanize</b>, makes it lean back; a <b class=\"m\">Bitcrusher</b> and a low-pass <b class=\"m\">Filter</b> age it. Make them shared (press per note on each title bar), so the beat plays with no key held.", "Trigger Grid lanes 1 to 3 into Drum Sampler pads 1 to 3 (kick, snare, closed hat), Swing about 0.3, Drum Sampler <b class=\"o\">Left</b> into a Bitcrusher (Bits about 8), into a Filter (<b class=\"o\">LP</b>, Cutoff about 4500 Hz), into the Output."], steps: [
+      { t: "Three drums from a pattern", h: "A Trigger Grid plays at least three drums you can hear, each from a lane with hits in it.", check: () => GOALS["c4_beat|Three drums from a pattern"](), apply: () => runDiff({"ensure": [["grid", "triggerGrid", 252, 20, {"l1s01": 1.0, "l1s08": 1.0, "l1s11": 1.0, "l2s05": 1.0, "l2s13": 1.0, "l3s01": 1.0, "l3s03": 1.0, "l3s05": 1.0, "l3s07": 1.0, "l3s09": 1.0, "l3s11": 1.0, "l3s13": 1.0, "l3s15": 1.0}, true], ["ds", "drumSampler", 484, 20, {}, true]], "link": [["grid", "lane1", "ds", "trigger1"], ["grid", "lane2", "ds", "trigger2"], ["grid", "lane3", "ds", "trigger3"], ["ds", "left", "out", "left"], ["ds", "right", "out", "right"]], "clips": [["ds", 0, "Kick"], ["ds", 1, "Snare"], ["ds", 2, "Closed hat"]]}) },
+      { t: "It leans back", h: "The hits aren't quite on the grid: the Trigger Grid's Swing is 0.15 or more, or a Humanize moves them.", check: () => GOALS["c4_beat|It leans back"](), apply: () => runDiff({"set": [["grid", {"swing": 0.3}]]}) },
+      { t: "Crunchy", h: "The drums go through a Bitcrusher with 10 bits or fewer, or a Vinyl, on their way to the Output.", check: () => GOALS["c4_beat|Crunchy"](), apply: () => runDiff({"ensure": [["crush", "crusher", 716, 20, {"rate": 12000.0, "mix": 0.6}, true]], "link": [["ds", "left", "crush", "in"], ["crush", "out", "out", "left"], ["crush", "out", "out", "right"]]}) },
+      { t: "A little muffled", h: "They go through a low-pass filter with its cutoff at 6000 Hz or lower.", check: () => GOALS["c4_beat|A little muffled"](), apply: () => runDiff({"ensure": [["flt", "filter", 948, 20, {"cutoff": 4500.0, "resonance": 0.1}, true]], "link": [["crush", "out", "flt", "in"], ["flt", "lowPass", "out", "left"], ["flt", "lowPass", "out", "right"]]}) },
+    ] },
+    { id: "c4_pad", part: 4, num: "4.21", title: "Challenge: a pad that breathes", intro: "A game composer wants a pad for a calm forest level: chords that swell in over a second or more, hang in the air after you let go, sound wide, and slowly change colour all by themselves.", how: [], challenge: true, hints: ["Think back to the ambient pads recipe (4.3): a pad is mostly about time, width and slow movement.", "An <b class=\"m\">Envelope</b> with a long <b class=\"m\">Attack</b> and <b class=\"m\">Release</b> on the <b class=\"m\">VCA</b>; a <b class=\"m\">Chorus</b> or a reverb for width; a slow <b class=\"m\">LFO</b> (or a <b class=\"m\">Drift</b>) on a low-pass <b class=\"m\">Filter</b>'s cutoff.", "Super Saw into a Filter (<b class=\"o\">LP</b>) into a VCA, Envelope Attack about 2 s and Release about 4 s, VCA into a shared Chorus into the Output, and an LFO at about 0.1 Hz into Filter <b class=\"i\">CV 1</b> with CV 1 amt about 1."], steps: [
+      { t: "You can play it", h: "Each key plays a note at its own pitch, and the note stops when you let go of the key.", check: () => GOALS["c4_pad|You can play it"](), apply: () => runDiff({"ensure": [["saw", "superSaw", 252, 20, {}, false], ["flt", "filter", 484, 20, {"cutoff": 1500.0, "resonance": 0.2}, false], ["vca", "vca", 716, 20, {"gain": 0.7}, false], ["env", "envelope", 716, 380, {"attack": 0.5, "sustain": 0.8, "release": 1.0}, false]], "link": [["midi", "pitch", "saw", "pitch"], ["saw", "out", "flt", "in"], ["flt", "lowPass", "vca", "in"], ["vca", "out", "out", "left"], ["midi", "gate", "env", "gate"], ["env", "out", "vca", "cv1"]]}) },
+      { t: "It swells in", h: "Each note takes a second or more to rise: the envelope on its VCA has an Attack of 1 s or longer.", check: () => GOALS["c4_pad|It swells in"](), apply: () => runDiff({"set": [["env", {"attack": 2.0}]]}) },
+      { t: "It hangs in the air", h: "Each note fades slowly once you let go: a Release of 2 s or longer on that envelope.", check: () => GOALS["c4_pad|It hangs in the air"](), apply: () => runDiff({"set": [["env", {"release": 4.0}]]}) },
+      { t: "It sounds wide", h: "It goes through a Chorus, a reverb or another stereo effect on its way to the Output.", check: () => GOALS["c4_pad|It sounds wide"](), apply: () => runDiff({"ensure": [["ch", "chorus", 948, 20, {"depth": 0.6}, true]], "link": [["vca", "out", "ch", "in"], ["ch", "left", "out", "left"], ["ch", "right", "out", "right"]]}) },
+      { t: "It changes colour by itself", h: "Something slow (an LFO at 0.5 Hz or less, a Drift or a Chaos) turns a low-pass filter's cutoff by half an octave or more.", check: () => GOALS["c4_pad|It changes colour by itself"](), apply: () => runDiff({"ensure": [["lfo", "lfo", 252, 380, {"rate": 0.1}, false]], "set": [["flt", {"cv1Amount": 1.0}]], "link": [["lfo", "out", "flt", "cv1"]]}) },
+    ] },
+    { id: "c4_wind", part: 4, num: "4.22", title: "Challenge: wind that never stops", intro: "A podcast needs wind behind a ghost story: it must blow on its own with no key held, whistle a little, and gust up and down by itself, never the same way twice.", how: [], challenge: true, hints: ["Think back to the soundscapes recipe (4.4). Wind is noise with most of it filtered away, and shared modules play with no key held.", "A shared <b class=\"m\">Noise</b> through a shared <b class=\"m\">Filter</b>'s band-pass (<b class=\"o\">BP</b>) output, with <b class=\"m\">Resonance</b> up. Something slow and shared (<b class=\"m\">Chaos</b>, <b class=\"m\">Drift</b> or a slow <b class=\"m\">LFO</b>) moves its cutoff.", "Noise <b class=\"o\">Pink</b> into Filter <b class=\"i\">In</b>, Filter <b class=\"o\">BP</b> into the Output, Cutoff about 700 Hz and Resonance about 0.75, both shared. A shared Chaos <b class=\"o\">X</b> into Filter <b class=\"i\">CV 1</b> with CV 1 amt about 1.5."], steps: [
+      { t: "It blows by itself", h: "Noise reaches the Output through a band-pass or high-pass filter, with both shared, so it plays with no key held.", check: () => GOALS["c4_wind|It blows by itself"](), apply: () => runDiff({"ensure": [["noise", "noise", 252, 20, {}, true], ["wind", "filter", 484, 20, {"cutoff": 700.0}, true]], "link": [["noise", "pink", "wind", "in"], ["wind", "bandPass", "out", "left"], ["wind", "bandPass", "out", "right"]]}) },
+      { t: "It whistles", h: "That filter's Resonance is at 0.6 or more, so the wind sings a little.", check: () => GOALS["c4_wind|It whistles"](), apply: () => runDiff({"set": [["wind", {"resonance": 0.75}]]}) },
+      { t: "It gusts", h: "Something slow and shared (Chaos, a Drift or an LFO at 0.5 Hz or less) turns that filter's cutoff by an octave or more.", check: () => GOALS["c4_wind|It gusts"](), apply: () => runDiff({"ensure": [["chaos", "chaos", 252, 380, {"rate": 0.3}, true]], "set": [["wind", {"cv1Amount": 1.5}]], "link": [["chaos", "x", "wind", "cv1"]]}) },
+    ] },
+    { id: "c4_reese", part: 4, num: "4.23", title: "Challenge: a moving bass", intro: "A drum & bass DJ wants a bass for a dark roller: two saws churning against each other, a wobble on its tone, and a steady sub underneath that never moves.", how: [], challenge: true, optional: true, hints: ["Think back to the drum &amp; bass recipe (4.5): a churning bass, a filter that moves, and a plain sub to hold the low end still.", "A <b class=\"m\">Reese</b> (or a <b class=\"m\">Super Saw</b>) churns; a <b class=\"m\">Wobble</b> or an <b class=\"m\">LFO</b> on a low-pass <b class=\"m\">Filter</b>'s cutoff wobbles it; a <b class=\"m\">Sub Oscillator</b> adds the sub.", "Reese into a Filter (<b class=\"o\">LP</b>, Cutoff about 300 Hz) into a Sub Oscillator (<b class=\"i\">In</b>, with MIDI In <b class=\"o\">Pitch</b> in its <b class=\"i\">Pitch</b>) into a VCA opened by an Envelope, and a Wobble <b class=\"o\">0..1</b> into Filter <b class=\"i\">CV 1</b> with CV 1 amt about 3."], steps: [
+      { t: "You can play it", h: "Each key plays a note at its own pitch, and the note stops when you let go of the key.", check: () => GOALS["c4_reese|You can play it"](), apply: () => runDiff({"ensure": [["reese", "reese", 252, 20, {"detune": 0.0}, false], ["vca", "vca", 948, 20, {"gain": 0.6}, false], ["env", "envelope", 948, 380, {"sustain": 1.0, "release": 0.1}, false]], "link": [["midi", "pitch", "reese", "pitch"], ["reese", "out", "vca", "in"], ["vca", "out", "out", "left"], ["midi", "gate", "env", "gate"], ["env", "out", "vca", "cv1"]]}) },
+      { t: "It churns", h: "Two detuned saws drift against each other: a Reese with Detune at 5 cents or more, a Super Saw with Detune at 0.2 or more, or two Oscillators tuned apart.", check: () => GOALS["c4_reese|It churns"](), apply: () => runDiff({"set": [["reese", {"detune": 15.0}]]}) },
+      { t: "Its tone wobbles", h: "A Wobble or an LFO turns a low-pass filter's cutoff by an octave and a half or more.", check: () => GOALS["c4_reese|Its tone wobbles"](), apply: () => runDiff({"ensure": [["flt", "filter", 484, 20, {"cutoff": 300.0, "resonance": 0.4, "cv1Amount": 3.0}, false], ["wob", "wobble", 484, 380, {}, false]], "link": [["reese", "out", "flt", "in"], ["flt", "lowPass", "vca", "in"], ["wob", "positive", "flt", "cv1"]]}) },
+      { t: "A steady sub", h: "A Sub Oscillator follows the keys, or a sine Oscillator an octave or more down, and you hear it.", check: () => GOALS["c4_reese|A steady sub"](), apply: () => runDiff({"ensure": [["sub", "subOsc", 716, 20, {}, false]], "link": [["flt", "lowPass", "sub", "in"], ["midi", "pitch", "sub", "pitch"], ["sub", "out", "vca", "in"]]}) },
+    ] },
+    { id: "c4_lead", part: 4, num: "4.24", title: "Challenge: an 80s lead", intro: "A film-maker wants the sound of a 1980s chase scene: a bright saw lead whose notes run up the chord you hold, with echoes answering it and a big room around it all.", how: [], challenge: true, optional: true, hints: ["Think back to the synthwave recipe (4.7): bright saws, an arpeggiator, then echoes and a room.", "A <b class=\"m\">Super Saw</b> (or an Oscillator on Saw) left bright, an <b class=\"m\">Arpeggiator</b> module playing it, an <b class=\"m\">Analog Delay</b> and a <b class=\"m\">Reverb</b>.", "An Oscillator on Saw (or a Super Saw) into a VCA opened by an Envelope, with an Arpeggiator’s <b class=\"o\">Pitch</b> and <b class=\"o\">Gate</b> in place of MIDI In’s, VCA into a shared Analog Delay, its outputs into a shared Reverb, the Reverb's into the Output."], steps: [
+      { t: "You can play it", h: "The keys play it (straight, or through an Arpeggiator), and it stops when you let go.", check: () => GOALS["c4_lead|You can play it"](), apply: () => runDiff({"ensure": [["osc", "oscillator", 252, 20, {"wave": 2.0}, false], ["vca", "vca", 484, 20, {"gain": 0.6}, false], ["env", "envelope", 484, 380, {"decay": 0.4}, false]], "link": [["midi", "pitch", "osc", "pitch"], ["osc", "out", "vca", "in"], ["vca", "out", "out", "left"], ["midi", "gate", "env", "gate"], ["env", "out", "vca", "cv1"]]}) },
+      { t: "Bright saws", h: "The keys play a Super Saw or an Oscillator on Saw, with no low-pass filter under 2000 Hz on it.", check: () => GOALS["c4_lead|Bright saws"](), apply: () => runDiff({"set": [["osc", {"wave": 1.0}]]}) },
+      { t: "It runs up the chord", h: "Hold a chord and its notes play one at a time: the Arp is on, or an Arpeggiator plays the sound.", check: () => GOALS["c4_lead|It runs up the chord"](), apply: () => runDiff({"ensure": [["arp", "arpeggiator", 20, 424, {"rate": 3.0, "octaves": 2.0}, false]], "unplug": [["osc", "pitch"], ["env", "gate"]], "link": [["arp", "pitch", "osc", "pitch"], ["arp", "gate", "env", "gate"]]}) },
+      { t: "Echoes answer it", h: "It goes through a delay on its way to the Output.", check: () => GOALS["c4_lead|Echoes answer it"](), apply: () => runDiff({"ensure": [["dly", "analogDelay", 716, 20, {"sync": 6.0, "mod": 0.4}, true]], "link": [["vca", "out", "dly", "in"], ["dly", "left", "out", "left"], ["dly", "right", "out", "right"]]}) },
+      { t: "A big room", h: "It goes through a reverb on its way to the Output.", check: () => GOALS["c4_lead|A big room"](), apply: () => runDiff({"ensure": [["rev", "reverbFx", 948, 20, {"size": 0.85}, true]], "link": [["dly", "left", "rev", "left"], ["dly", "right", "rev", "right"], ["rev", "left", "out", "left"], ["rev", "right", "out", "right"]]}) },
+    ] },
     { keep: true, id: "l6", part: 5, num: "5.1", how: ["A <b class=\"m\">Compressor</b> turns a sound down when it gets louder than its <b class=\"m\">Threshold</b>, by its <b class=\"m\">Ratio</b>: at 4 to 1, 4 dB over the line comes out only 1 dB over. That evens a part out and makes it punchier.", "Its <b class=\"i\">Sidechain</b> input lets another sound do the pushing: patch the kick in, and the pad ducks out of the kick's way on every beat. That breathing is the pumping sound of house and EDM.", "A <b class=\"m\">Limiter</b> is a compressor with a brick wall: nothing gets past its ceiling, so the end of the chain can't clip. <b class=\"m\">Macros</b> are eight knobs Ableton can see, so your keyboard's knobs can turn anything in the patch.", "More in workshop 7.7, The dynamics toolkit."], quizzes: [{"t": "Quick check", "quiz": {"q": "A pad ducks every time the kick hits. Which input of the Compressor is the kick patched into?", "choices": ["Sidechain", "In", "Threshold", "The Limiter"], "answer": 0, "why": "The Sidechain decides when the Compressor turns down; In is the sound that gets turned down."}}] },
     { id: "p5_track", part: 5, num: "5.2", title: "The Track editor in depth", intro: "The Track editor is where you write a part: a loop of notes that plays through the patch, like a MIDI clip in Ableton.", how: ["Time runs left to right in <b class=\"m\">beats</b>: a beat is a 1/4 note, and a bar is four beats. Each row is one note, so higher rows are higher notes. The grid lines are where new notes snap to.", "A note has a start, a <b class=\"m\">length</b> and a <b class=\"m\">velocity</b>: how hard it is played, from soft to loud. The notes are sent to the patch just as your keyboard sends them, so a long note holds the envelope open and a soft one plays quietly if the patch uses MIDI In <b class=\"o\">Velocity</b>.", "The part loops. <b class=\"m\">Length</b> sets how many bars it is (1, 2, 4 or 8). In the standalone app each track has eight patterns, A to H, each a loop of its own, and the Song page says which plays when."], steps: [
       { t: "A sound to play", h: "The notes play through the patch, so it needs a sound. Load a preset you like with <b class=\"m\">Presets</b> (keys or a pluck suit this lesson), or keep the patch you have. If the Output has nothing patched into it, Show me builds a simple sound.", check: () => (L.ncab('*', '*', 'output', '*') > 0), apply: () => runDiff({"ensure": [["osc", "oscillator", 252, 20, {}, false], ["flt", "filter", 484, 20, {"cutoff": 1500.0}, false], ["vca", "vca", 716, 20, {}, false], ["env", "envelope", 484, 380, {"decay": 0.4, "sustain": 0.5}, false]], "link": [["midi", "pitch", "osc", "pitch"], ["osc", "out", "flt", "in"], ["flt", "lowPass", "vca", "in"], ["midi", "gate", "env", "gate"], ["env", "out", "vca", "cv1"], ["midi", "velocity", "vca", "cv2"], ["vca", "out", "out", "left"]]}) },
@@ -7877,6 +7915,15 @@ registerProcessor('patch-school', Proc);`;
       { t: "Fade out the end", h: "On the track that plays last, use a lane with its knob on <b class=\"m\">Volume</b>: a point at about 0.8 four bars before the end, and one at the very bottom on the last bar. The song now fades away.", manual: true, where: "app" },
       { t: "Export a WAV", h: "Press <b class=\"m\">Export WAV...</b> and save the song. It is rendered through fresh copies of every synth, with a few seconds at the end for echoes to fade, into a file you can play anywhere, drag into Ableton or share.", manual: true, where: "app" },
       { t: "Quick check", quiz: {"q": "The Master meter keeps turning coral in the hook. What is the best fix?", "choices": ["Turn the Master (or the loudest tracks) down", "Add more reverb", "Pan everything left", "Speed up the tempo"], "answer": 0, "why": "Coral means the sound is clipping: too loud for the file. Turning down keeps it clean, and the listener can always turn their own volume up."} },
+    ] },
+    { id: "f5_quiet", part: 5, num: "5.8", title: "Fix it: the song that went quiet", intro: "Somebody has been at the mixer: play the demo song and only the chords come out. Three things on the Song page are wrong. Find them on the mixer, and play it through until every meter moves.", how: [], challenge: true, fixIt: true, songFix: true, tab: "song", hints: ["Every track has its own row on the mixer, with a volume slider and two buttons. Look along each row: which tracks could be heard, and what is stopping the others?", "<b class=\"m\">S</b> (solo) on the Chords track silences every track that isn't soloed. <b class=\"m\">M</b> (mute) is lit on the Bass. And the Drums' volume slider is all the way down.", "Turn off S on Chords and M on Bass, set the Drums' volume to about 0.8, then press <b class=\"m\">Play song</b> and listen until the bass comes in."], steps: [
+      { t: "Nothing soloed or muted", h: "No track has S (solo) or M (mute) lit, so every track can be heard.", check: () => GOALS["f5_quiet|Nothing soloed or muted"](), apply: () => SONG_FIXES["f5_quiet"].show["Nothing soloed or muted"]() },
+      { t: "Every track is up", h: "Every track's volume is at 0.3 or more.", check: () => GOALS["f5_quiet|Every track is up"](), apply: () => SONG_FIXES["f5_quiet"].show["Every track is up"]() },
+      { t: "You hear every track", h: "Play the song: every track that plays somewhere reaches the mix, so its meter moves. (Let it play until the bass comes in.)", check: () => GOALS["f5_quiet|You hear every track"](), apply: () => SONG_FIXES["f5_quiet"].show["You hear every track"]() },
+    ] },
+    { id: "f5_key", part: 5, num: "5.9", title: "Fix it: the sour bass", intro: "Play the demo song: halfway through, the bass turns sour, as if someone played it with the keyboard's transpose left on. The song is in A minor. Find the bars that are out of key and mend them on the Song page.", how: [], challenge: true, fixIt: true, songFix: true, tab: "song", hints: ["Listen for when it goes wrong, then look at the Bass row in the arranger at that bar. Is it playing the same pattern as before, or a different letter?", "In the second half the Bass plays a new pattern: a copy of the first with every note a semitone off the key. The patterns it played before are still there, in key.", "On the Bass row, pick the pattern it plays in the first half in the letter menu, and click (or drag along) the sour bars to put it back there. Then play the song through."], steps: [
+      { t: "The bass is back in key", h: "Every bar the Bass plays is in A minor again, right to the end of the song (taking the sour bars out is no fix).", check: () => GOALS["f5_key|The bass is back in key"](), apply: () => SONG_FIXES["f5_key"].show["The bass is back in key"]() },
+      { t: "Hear it through", h: "Play the song, and listen to the second half: the bass sits with the chords again.", check: () => GOALS["f5_key|Hear it through"](), apply: () => SONG_FIXES["f5_key"].show["Hear it through"]() },
     ] },
     { id: "p6_plan", part: 6, num: "6.1", title: "Plan the track", intro: "Part 6 is one project: a lofi track of your own, about three and a half minutes long, from an empty song to a WAV you can share. Each lesson adds one part. This one sets the song up.", how: ["A track is a few <b class=\"m\">parts</b> that each do one job: <b class=\"m\">Keys</b> for the chords, <b class=\"m\">Drums</b> for the beat, <b class=\"m\">Bass</b> for the low end, a <b class=\"m\">Melody</b> on top and a <b class=\"m\">Texture</b> (rain, crackle, a hum) that glues it together.", "In the standalone app each part is a <b class=\"m\">track</b> with its own synth: its own patch, its own key setting and its own loops. You pick a track on the Song page, and the Instrument page and the Track editor then show that track's.", "Lofi is slow, usually <b class=\"m\">70 to 90 BPM</b>, and often in a minor key. This track is in <b class=\"m\">F minor</b> at <b class=\"m\">80 BPM</b>: warm, a little sad, and easy to nod along to."], tab: "song", steps: [
       { t: "A fresh song", h: "Press <b class=\"m\">File</b> at the top of the Song page and choose <b class=\"m\">New empty song</b>, so nothing from the demo is left over. (Save anything you want to keep first.)", manual: true, where: "app" },
@@ -7941,6 +7988,18 @@ registerProcessor('patch-school', Proc);`;
       { t: "Export your track", h: "Press <b class=\"m\">Export WAV...</b> and save it as <b class=\"m\">My lofi track.wav</b>. That file is your finished track: play it anywhere, drag it into Ableton, or share it.", manual: true, where: "app" },
       { t: "Save the song", h: "Save the song too (Ctrl+S), so you can come back and change it: a new hook pattern, a different texture, a second verse.", manual: true, where: "app" },
       { t: "Quick check", quiz: {"q": "Why is the Texture track turned so far down?", "choices": ["It is a bed, felt more than heard, so it mustn't cover the keys and melody", "Noise is always too loud", "So it can be exported", "Because it is the last track"], "answer": 0, "why": "A texture works under everything else. Turned up, it would cover the parts it is there to glue together."} },
+    ] },
+    { id: "p6_score", part: 6, num: "6.9", title: "Score your track", intro: "Your lofi track is finished. Before you move on, play it through once more and score it the way a capstone is scored: eight lines, 0 to 3 each.", how: ["Scoring your own work is a skill of its own. Listen to the whole track, without stopping to fix things, then go down the sheet and give each line the score whose words fit best. Be honest: nobody else sees it.", "These are the same eight lines Capstone A uses at the end of Level 3, where you make a track of your own. Aim for 16 of 24 with no zero, and fix the lowest line first: that one change usually lifts the whole track.", "Change a score whenever you like. After a fix, play the track again and score that line again."], tab: "song", steps: [
+      { t: "Play it through", h: "Click the ruler at bar 1 and press <b class=\"m\">Play song</b>. Listen to the whole track before you score it.", manual: true, where: "app" },
+      { t: "The brief", h: "Did you make what Part 6 set out: five parts, in F minor at about 80 BPM, three minutes or so?", score: ["0: a loop or two, not yet a track", "1: some parts missing, or much too short", "2: all five parts, a little short or off the plan", "3: all five parts, the key, the tempo and the length"] },
+      { t: "Arrangement", h: "Do the sections change and hold the ear: the intro, the verse, the hook, the break and the outro?", score: ["0: the same all the way through", "1: one change, then the same again", "2: sections you can hear, but some drag", "3: each section lands, and the hook feels like a lift"] },
+      { t: "Sound design", h: "Do the sounds suit lofi, and are some of them your own (the Part 4 recipes count)?", score: ["0: presets that fight the style", "1: the right kind of sounds, none of them yours", "2: your own sounds, one that doesn't sit right", "3: your own sounds, warm and worn, all of a piece"] },
+      { t: "Balance", h: "Can you hear every part, with the drums and keys leading and the texture felt more than heard?", score: ["0: a part is lost, or one drowns the rest", "1: everything is heard, but the wrong parts lead", "2: about right, one part a little loud or quiet", "3: drums and keys lead, the rest sit just right"] },
+      { t: "Low end", h: "Are the bass and the kick clear, each with room of its own, and no boom or mud?", score: ["0: boomy, or no low end at all", "1: the bass and kick blur together", "2: clear on good speakers, thin or heavy on others", "3: firm and clear, both of them"] },
+      { t: "Space", h: "Does it have width and depth, with nothing washed out in reverb?", score: ["0: everything in the middle, or drowned", "1: some width, but flat or washy", "2: wide and deep, one part a little wet", "3: each part has its place, near or far"] },
+      { t: "Headroom", h: "Does the Master meter stay out of the coral all the way through, the loudest hook included?", score: ["0: it clips often", "1: it clips in the loudest parts", "2: clean, but very close to the top", "3: clean all the way, with room to spare"] },
+      { t: "Finish", h: "Does it start cleanly and end on purpose, with nothing left in by accident?", score: ["0: it stops dead, or starts with a click", "1: the ending just stops", "2: a fade, but a stray note or a gap", "3: a clean start, a fade-out, nothing stray"] },
+      { t: "Quick check", quiz: {"q": "A track scores 18 of 24, with a 0 for Headroom. Would it pass Capstone A's mark?", "choices": ["Yes: 18 is more than 16", "No: a zero holds it back, whatever the total", "Only if the zero were on Finish"], "answer": 1, "why": "The mark is 16 of 24 with no zero, so one line can't be left broken. Fix the clipping, play it through and score Headroom again."} },
     ] },
     { id: "p7_waves", part: 7, num: "7.1", title: "More ways to make a wave", intro: "Four sound sources with a character of their own. Swap each one into the same simple voice and hear what it can do.", how: ["<b class=\"m\">Phase Distortion</b> reads a sine wave at an uneven speed, which bends it towards a saw or a square. It is how Casio's CZ synths got bright tones without a filter: an envelope on <b class=\"i\">Amount</b> makes the sound open and close.", "A <b class=\"m\">Drawbar Organ</b> adds up nine sines, one for each drawbar. Each drawbar is a pitch (16' is an octave down, 8' the note, 4' an octave up and so on), pulled out from 0 to 8.", "A <b class=\"m\">Complex Oscillator</b> is two oscillators in one: a modulator bends the carrier (FM), then a wavefolder folds its peaks. A <b class=\"m\">Multi-Model Oscillator</b> has eight sound engines, each shaped by the same three knobs: <b class=\"m\">Harmonics</b>, <b class=\"m\">Timbre</b> and <b class=\"m\">Morph</b>."], steps: [
       { t: "Phase Distortion", h: "Add a <b class=\"m\">Phase Distortion</b> (Sound sources), a <b class=\"m\">VCA</b> and an <b class=\"m\">Envelope</b>. Patch MIDI In <b class=\"o\">Pitch</b> to its <b class=\"i\">Pitch</b>, its <b class=\"o\">Out</b> to VCA <b class=\"i\">In</b>, VCA <b class=\"o\">Out</b> to Output <b class=\"i\">Left</b>, MIDI In <b class=\"o\">Gate</b> to Envelope <b class=\"i\">Gate</b> and Envelope <b class=\"o\">Out</b> to VCA <b class=\"i\">CV 1</b>. Hold a note and turn <b class=\"m\">Amount</b> from 0 up: a sine that turns into a saw.", check: () => L.cab('midiIn', 'gate', 'envelope', 'gate') && L.cab('envelope', 'out', 'vca', 'cv1') && L.cab('midiIn', 'pitch', 'phaseDistortion', 'pitch') && L.cab('phaseDistortion', 'out', 'vca', 'in') && L.cab('vca', 'out', 'output', 'left'), apply: () => runDiff({"ensure": [["pd", "phaseDistortion", 252, 20, {}, false], ["vca", "vca", 484, 20, {}, false], ["env", "envelope", 484, 380, {"release": 0.5}, false]], "link": [["midi", "gate", "env", "gate"], ["env", "out", "vca", "cv1"], ["midi", "pitch", "pd", "pitch"], ["pd", "out", "vca", "in"], ["vca", "out", "out", "left"]]}) },
@@ -8155,9 +8214,9 @@ registerProcessor('patch-school', Proc);`;
   // Tune-up, which are in the app).
   const PRO_LEVELS = 'Level 2, Sound designer: modulation as a design skill, sound briefs matched by ear and the Level 2 check. Level 3, Track maker: mixing a song of your own, then Capstone A, an original track. Level 4: hardware and Eurorack volts, generative patching, West Coast synthesis and performance, then the Level 4 check.';
   function whatsNext(ls) {
-    if (ls.id === 'm_level1') return ['<b>Level 1 passed.</b> The rest of the free course puts it to work: Part 4’s first four sound recipes, Part 5, from patch to track, and Part 6, a whole lofi track of your own. Part 4’s other recipes are optional: take any whenever you like.',
+    if (ls.id === 'm_level1') return ['<b>Level 1 passed.</b> The rest of the free course puts it to work: Part 4’s first four sound recipes and their challenges, Part 5, from patch to track, and Part 6, a whole lofi track of your own, scored the way a capstone is. Part 4’s other recipes are optional: take any whenever you like.',
       'After the free course, Patch School Pro, in the Patch School app, goes on. ' + PRO_LEVELS];
-    if (ls.id === 'p6_mix') return ['<b>Your first track is done,</b> and with it the free course’s lessons. The rest are extras, in any order: Part 4’s optional recipes, a sound for each genre, and Part 7’s module workshops, one short lesson per family of modules the course doesn’t reach.',
+    if (ls.id === 'p6_score') return ['<b>Your first track is done and scored,</b> and with it the free course’s lessons. The rest are extras, in any order: Part 4’s optional recipes, a sound for each genre (two with a challenge of their own), and Part 7’s module workshops, one short lesson per family of modules the course doesn’t reach.',
       'Patch School Pro, in the Patch School app, goes on from here. ' + PRO_LEVELS];
     return null;
   }
@@ -8170,7 +8229,7 @@ registerProcessor('patch-school', Proc);`;
     if (!words || !lessonDone(ls) || running(ls)) return null;
     const first = LESSONS.find((l) => l.part === 7);
     const pick = (l) => { const d = $('#courseMap'); if (d.open) d.close(); if (l) pickLesson(l); };
-    const go = ls.id === 'p6_mix' && first ? h('button', { type: 'button', class: 'btn small', onclick: () => pick(first) }, 'The workshops')
+    const go = ls.id === 'p6_score' && first ? h('button', { type: 'button', class: 'btn small', onclick: () => pick(first) }, 'The workshops')
       : h('button', { type: 'button', class: 'btn small', onclick: () => pick(LESSONS.find((l) => !l.info && !lessonDone(l) && !isExtra(l))) }, 'Continue');
     return h('section', { class: 'next-card', 'aria-label': 'What’s next' }, h('h3', {}, 'What’s next'), words.map((w) => h('p', { html: w })),
       h('div', { class: 'step-tools' }, go, proLink()));
@@ -8523,6 +8582,7 @@ registerProcessor('patch-school', Proc);`;
       check: exportedNow, apply: exportNow }),
     'p6_mix|Save the song': () => ({ h: `Save the song too (${M('Save song…')}, under the same name), so you can come back and change it: a new hook pattern, a different texture, a second verse.`,
       check: () => !!song.name && songSaved(), apply: () => saveSong(song.name || 'My lofi track') }),
+    'p6_score|Play it through': () => ({ check: () => songPlaying && !songLoops, apply: () => { startBar = 0; return playSong(false); } }),
     // 7.16: the lab has a Track editor now
     'p7_hand|Play it from the Track editor': () => ({ h: `Open ${editorWords} and press ${M('Drums')}: the Percussion Kit’s notes are named there too. Draw a few hits on two or more of them, such as the high conga (D#3) on the off-beats and the shaker (A#3) on every 1/16, and press ${M('Play loop')} over your clocked groove.`,
       check: () => new Set(labPat().notes.filter((n) => [70, 63, 64, 54, 56, 49, 51, 37].includes(n[1])).map((n) => n[1])).size >= 2,
@@ -8542,7 +8602,36 @@ registerProcessor('patch-school', Proc);`;
     const w = WEB_BY_ID[c.id];
     return Object.assign(w, { part: c.part, num: c.num, short: c.num, how: c.how && c.how.map(webWords), steps: w.info ? w.steps : [...w.steps, ...c.quizzes] });
   }).map((ls) => { (ls.steps || []).forEach((st) => webStep(ls, st)); return ls; });
-  const isTask = (st) => !st.manual && !st.quiz && !st.ear;
+  const isTask = (st) => !st.manual && !st.quiz && !st.ear && !st.score;
+  // A score sheet (6.9, the plugin's Lessons::totalOf and sheetVerdict): each
+  // line scores 0 to 3, and Capstone A's mark is two thirds with no zero.
+  function sheetVerdict(ls) {
+    const scores = selfScores[ls.id] || [];
+    let score = 0, outOf = 0, lines = 0, scored = 0, zeros = 0, lowest = -1;
+    ls.steps.forEach((st, k) => {
+      if (!st.score) return;
+      lines++; outOf += 3;
+      const v = scores[k] ?? -1;
+      if (v < 0 || v > 3) return;
+      scored++; score += v; if (v === 0) zeros++;
+      if (lowest < 0 || v < scores[lowest]) lowest = k;
+    });
+    if (!lines || scored < lines) return '';
+    const pass = zeros === 0 && score * 3 >= outOf * 2;
+    return `Your score: ${score} of ${outOf}. ` + (pass ? 'That would pass Capstone A’s mark (two thirds, with no zero). '
+      : zeros ? 'A zero would hold back a capstone whatever the total, so start there. ' : 'Capstone A’s mark is two thirds, with no zero. ')
+      + (scores[lowest] < 3 ? `Work on ${ls.steps[lowest].t} first, then play it through and score that line again.` : 'Full marks: nothing to fix.');
+  }
+  function scoreLine(ls, k, v) {
+    const scores = selfScores[ls.id] || (selfScores[ls.id] = []);
+    while (scores.length < ls.steps.length) scores.push(-1);
+    scores[k] = v; started[ls.id] = true; markDone(ls.id, k); save();
+    const verdict = sheetVerdict(ls);
+    toast(verdict || `Scored ${v}.`);
+    const next = ls.steps.findIndex((st, j) => j > k && st.score && (scores[j] ?? -1) < 0);
+    renderLesson();
+    if (next >= 0) { const li = document.querySelectorAll('#lessons ol.steps > li')[next]; if (li) { li.classList.add('open'); li.classList.remove('shut'); } }
+  }
   // An extra: a workshop (Part 7) or an optional recipe (Part 4 after 4.4,
   // the plugin's Lesson::optional). Continue and Suggested next take them
   // after the rest of the course, and a part counts them apart from its done.
@@ -8624,6 +8713,26 @@ registerProcessor('patch-school', Proc);`;
     const tickShort = () => envelopeOn('clock', '*', 'vca', 'cv1|cv2', (e) => decayOf(e) <= 0.1 && sustainOf(e) <= 0.05);
     const sizzle = () => filtered('noise', false, (f) => k(f, 'cutoff') >= 5000);
     const landsLow = (sineOnly) => mods('oscillator').some((o) => (!sineOnly || Math.round(k(o, 'wave')) === 0) && k(o, 'octave') + lowestOffset(o) <= -2 && (sineOnly || path(o, '*', 'output', '*')));
+    // Part 4's recipe challenges (4.19 to 4.24): the plugin's recipeChallengeLessons.
+    const KEYS_SOURCES = 'fmOperator|oscillator|wavetable|superSaw', BASS_SOURCES = 'reese|superSaw|oscillator|wavetable';
+    const DRUMS = 'drumSampler|drumKit|kick|snare|hiHat|clap|tom|percussionKit';
+    const WIDENERS = 'chorus|phaser|flanger|stereoWidener|reverbFx|plateReverb|shimmerReverb|springReverb';
+    const DELAYS = 'analogDelay|delayFx|tapeEcho|reverseDelay', REVERBS = 'reverbFx|plateReverb|shimmerReverb|springReverb', SLOW = 'lfo|drift|chaos';
+    const through = (source, via) => mods(via).some((m) => path(source, '*', m, '*') && path(m, '*', 'output', '*'));
+    const slowlyMovesFilter = (octaves, sharedOnly) => mods(SLOW).some((m) => (m.type !== 'lfo' || k(m, 'rate') <= 0.5) && (!sharedOnly || m.shared) && movesFilter(m, '*', octaves));
+    const gridHits = (m, lane) => { let n = 0; for (let st = 1; st <= 16; st++) if (k(m, `l${lane}s${String(st).padStart(2, '0')}`) > 0.5) n++; return n; };
+    const drumLanes = () => Math.max(0, ...mods('triggerGrid').map((g) => { let n = 0; for (let lane = 1; lane <= 8; lane++) if (gridHits(g, lane) > 0 && path(g, 'lane' + lane, DRUMS, '*')) n++; return n; }));
+    const hasSound = (m, slot) => !!(m.clips && m.clips[slot]);
+    const drumsHeard = () => path(DRUMS, '*', 'output', '*') && !mods('drumSampler').some((m) => !(hasSound(m, 0) && hasSound(m, 1) && hasSound(m, 2)) && path(m, '*', 'output', '*'));
+    const windFilter = (test) => mods('noise').some((n) => n.shared && mods(FILTERS).some((f) => { const o = passOutput(f, false); return f.shared && o && path(n, '*', f, 'in') && path(f, o, 'output', '*') && (!test || test(f)); }));
+    const keysHeard = (m) => path('midiIn', 'pitch', m, 'pitch') && path(m, '*', 'output', '*');
+    const churns = () => mods('reese|superSaw').some((m) => keysHeard(m) && k(m, 'detune') >= (m.type === 'reese' ? 5 : 0.2))
+      || mods('oscillator').some((a) => mods('oscillator').some((b) => a !== b && keysHeard(a) && keysHeard(b) && Math.abs(k(a, 'fine') - k(b, 'fine')) >= 0.05));
+    const leadPlays = () => (plays() || (path('arpeggiator', 'pitch', SOURCES, 'pitch') && path(SOURCES, '*', 'output', '*'))) && (stops() || gated(SOURCES, 'arpeggiator', 'gate'));
+    const brightSaws = () => mods('superSaw|oscillator').some((m) => (m.type === 'superSaw' || Math.round(k(m, 'wave')) === 1) && path('midiIn|arpeggiator', 'pitch', m, 'pitch') && path(m, '*', 'output', '*'))
+      && !filtered('superSaw|oscillator', true, (f) => k(f, 'cutoff') < 2000);
+    // Part 5's Song page fix-its: the mixer, and the Bass in A minor.
+    const tracksOk = (test) => song.tracks.length > 0 && song.tracks.every(test);
     const dies = (anyFilterEnv) => mods(ENVS).some((e) => path('midiIn', 'gate', e, 'gate|trigger') && (anyFilterEnv ? path(e, 'out', FILTERS, 'cv1|cv2') : movesFilter(e, 'out', 1.5)) && decayOf(e) <= 0.6 && sustainOf(e) <= 0.2);
     return {
       'c_bass|You can play it': () => plays(),
@@ -8676,11 +8785,110 @@ registerProcessor('patch-school', Proc);`;
       'f_kick|It lands low': () => gated('oscillator', 'clock', '*') && landsLow(false),
       'f_bassline|The riff plays': () => path('sequencer', 'pitch', SOURCES, 'pitch') && plays(),
       'f_bassline|Each step is a note': () => plays() && gated(SOURCES, 'sequencer', 'gate'),
+      'c4_keys|You can play it': playable(KEYS_SOURCES),
+      'c4_keys|It answers your touch': () => path('midiIn', 'velocity', 'vca', 'cv1|cv2') || path('midiIn', 'velocity', 'fmOperator', 'level'),
+      'c4_keys|Dull at the top': () => filtered(KEYS_SOURCES, true, (f) => k(f, 'cutoff') <= 2500),
+      'c4_keys|A wobble like tape': () => mods('tape').some((t) => k(t, 'wow') >= 0.3 && path(KEYS_SOURCES, '*', t, 'in') && path(t, '*', 'output', '*'))
+        || (path(SLOW, '*', KEYS_SOURCES, 'pitch|fm') && path(KEYS_SOURCES, '*', 'output', '*')),
+      'c4_beat|Three drums from a pattern': () => drumLanes() >= 3 && drumsHeard(),
+      'c4_beat|It leans back': () => (mods('triggerGrid').some((g) => k(g, 'swing') >= 0.15) && drumLanes() > 0) || (path('triggerGrid', '*', 'humanize', '*') && path('humanize', '*', DRUMS, '*')),
+      'c4_beat|Crunchy': () => mods('crusher|vinyl').some((m) => (m.type === 'vinyl' || k(m, 'bits') <= 10) && path(DRUMS, '*', m, 'in') && path(m, '*', 'output', '*')),
+      'c4_beat|A little muffled': () => filtered(DRUMS, true, (f) => k(f, 'cutoff') <= 6000),
+      'c4_pad|You can play it': playable(),
+      'c4_pad|It swells in': () => envelopeOn('midiIn', 'gate', 'vca', 'cv1|cv2', (e) => k(e, 'attack') >= 1),
+      'c4_pad|It hangs in the air': () => envelopeOn('midiIn', 'gate', 'vca', 'cv1|cv2', (e) => k(e, 'release') >= 2),
+      'c4_pad|It sounds wide': () => through(SOURCES, WIDENERS),
+      'c4_pad|It changes colour by itself': () => filtered(SOURCES, true) && slowlyMovesFilter(0.5, false),
+      'c4_wind|It blows by itself': () => windFilter(),
+      'c4_wind|It whistles': () => windFilter((f) => k(f, 'resonance') >= 0.6),
+      'c4_wind|It gusts': () => windFilter() && slowlyMovesFilter(1, true),
+      'c4_reese|You can play it': playable(BASS_SOURCES),
+      'c4_reese|It churns': churns,
+      'c4_reese|Its tone wobbles': () => filtered(BASS_SOURCES, true) && mods('wobble|lfo').some((m) => movesFilter(m, '*', 1.5)),
+      'c4_reese|A steady sub': () => mods('subOsc').some(keysHeard) || mods('oscillator').some((m) => Math.round(k(m, 'wave')) === 0 && k(m, 'octave') <= -1 && keysHeard(m)),
+      'c4_lead|You can play it': leadPlays,
+      'c4_lead|Bright saws': brightSaws,
+      'c4_lead|It runs up the chord': () => path('arpeggiator', 'pitch', 'superSaw|oscillator|wavetable', 'pitch'),
+      'c4_lead|Echoes answer it': () => through(SOURCES, DELAYS),
+      'c4_lead|A big room': () => through(SOURCES, REVERBS),
+      'f5_quiet|Nothing soloed or muted': () => tracksOk((t) => !t.solo && !t.mute),
+      'f5_quiet|Every track is up': () => tracksOk((t) => t.vol >= 0.3),
+      'f5_quiet|You hear every track': () => songPlaying && tracksOk((t) => !t.solo && !t.mute && t.vol >= 0.3),
+      'f5_key|The bass is back in key': () => SONG_FIXES.bassInKey(),
+      'f5_key|Hear it through': () => songPlaying,
       'm_level1|You can play it': playable(),
       'm_level1|Two oscillators': () => keyed().length >= 2 && stops(),
       'm_level1|Not twins': () => { const f = keyed(); return f.some((a, i) => f.some((b, j) => j > i && differ(a, b))); },
       'm_level1|One filter shapes both': () => { const f = keyed(); return mods(FILTERS).some((flt) => { const o = passOutput(flt, true); return o && path(flt, o, 'output', '*') && f.filter((s) => path(s, '*', flt, 'in')).length >= 2; }); },
       'm_level1|Each note opens the filter': () => gateOpensFilter(1.5)
+    };
+  })();
+  // ---------- Part 5's Song page fix-its ----------
+  // Like the plugin's (Source/lessons/Part5Lessons.cpp), they break the demo
+  // song (New song… > Demo song) rather than the rack: break() returns false
+  // when the song isn't the demo, and show has each goal's Show me.
+  const SONG_FIXES = (() => {
+    const A_MINOR = new Set([9, 11, 0, 2, 4, 5, 7]);
+    const inKey = (pat) => pat.notes.every((n) => A_MINOR.has(((n[1] % 12) + 12) % 12));
+    const offKey = (note) => A_MINOR.has((note + 1) % 12) ? note - 1 : note + 1; // up a semitone, unless that's still in the key
+    const named = (name) => song.tracks[trackNamed(name)];
+    const barsOf = (t) => t.arr.map((p, b) => p >= 0 ? b : -1).filter((b) => b >= 0);
+    const offKeyCopy = (good, bad) => good.notes.length > 0 && good.notes.length === bad.notes.length && good.bars === bad.bars
+      && good.notes.every((g, i) => bad.notes[i][1] === offKey(g[1]) && Math.abs(bad.notes[i][0] - g[0]) < 1e-6 && Math.abs(bad.notes[i][2] - g[2]) < 1e-6);
+    // Every bar the Bass plays is in A minor, and it still plays in the song's last bar.
+    function bassInKey() {
+      const t = named('Bass'); if (!t) return false;
+      const bars = barsOf(t);
+      return bars.length > 0 && t.arr[songBars() - 1] >= 0 && bars.every((b) => inKey(t.patterns[t.arr[b]]));
+    }
+    const isDemo = () => trackNamed('Chords') >= 0 && trackNamed('Drums') >= 0 && !!named('Bass') && barsOf(named('Bass')).length > 0 && bassInKey();
+    const mix = (fn) => { song.tracks.forEach(fn); songFlags.mixed = true; songChanged(true); };
+    return {
+      bassInKey, isDemo,
+      f5_quiet: {
+        break() {
+          if (!isDemo()) return false;
+          const chords = named('Chords'), drums = named('Drums'), bass = named('Bass');
+          song.tracks.forEach((t) => { t.solo = t === chords; t.mute = t === bass; if (t === drums) t.vol = 0; else if (t.vol < 0.3) t.vol = 0.8; });
+          return true;
+        },
+        show: {
+          'Nothing soloed or muted': () => mix((t) => { t.solo = false; t.mute = false; }),
+          'Every track is up': () => mix((t) => { if (t.vol < 0.3) t.vol = 0.8; }),
+          'You hear every track': () => playSong(false)
+        }
+      },
+      f5_key: {
+        // Each pattern the Bass plays in its second half gets an off-key copy
+        // in a spare slot, and those bars play the copies.
+        break() {
+          if (!isDemo()) return false;
+          const t = named('Bass'), bars = barsOf(t), copies = new Map();
+          for (const b of bars.slice(Math.floor(bars.length / 2))) {
+            const p = t.arr[b];
+            if (!copies.has(p)) {
+              const spare = t.patterns.findIndex((pat, q) => pat.notes.length === 0 && !bars.some((x) => t.arr[x] === q) && ![...copies.values()].includes(q));
+              if (spare < 0) return false;
+              t.patterns[spare] = { bars: t.patterns[p].bars, notes: t.patterns[p].notes.map((n) => [n[0], offKey(n[1]), n[2], n[3]]) };
+              copies.set(p, spare);
+            }
+            t.arr[b] = copies.get(p);
+          }
+          return !bassInKey();
+        },
+        show: {
+          'The bass is back in key': () => {
+            const t = named('Bass'); if (!t) return;
+            t.arr.forEach((p, b) => {
+              if (p < 0 || inKey(t.patterns[p])) return;
+              const q = t.patterns.findIndex((pat, k) => k !== p && inKey(pat) && offKeyCopy(pat, t.patterns[p]));
+              if (q >= 0) t.arr[b] = q;
+            });
+            songFlags.arranged = (songFlags.arranged || 0) + 1; songChanged(true);
+          },
+          'Hear it through': () => playSong(false)
+        }
+      }
     };
   })();
   // ---------- challenges, fix-its, ear tests and the Level 1 check ----------
@@ -8741,6 +8949,17 @@ registerProcessor('patch-school', Proc);`;
       attempt = { lid: ls.id, at: Date.now(), seconds: -1, qs: drawQuestions(ls), answers: [] };
       started[ls.id] = true; save(); renderLesson();
       toast('Ear test started. Press Play the sound on the first question.');
+      return;
+    }
+    if (ls.songFix) {
+      // A Song page fix-it breaks the demo song and leaves the rack alone.
+      closeTrack(true); stopSong();
+      if (!SONG_FIXES[ls.id].break()) { toast('This fix-it breaks the demo song. Save your own song if you want to keep it, choose New song… > Demo song, then press Start fix-it again.'); renderLesson(); return; }
+      selTrack = 0; startBar = 0; songChanged(true);
+      progress[ls.id] = []; started[ls.id] = true;
+      attempt = { lid: ls.id, at: Date.now(), seconds: -1, hints: 0, gaveUp: false, part: 0, ticked: new Set() };
+      save(); renderLesson(); runChecks();
+      toast('Here is the broken song, and the clock is running. Play it, listen, and mend it here. New song… > Demo song brings the demo back as it was.');
       return;
     }
     closeTrack(true); freshRack(ls.outAt);
@@ -8902,7 +9121,8 @@ registerProcessor('patch-school', Proc);`;
       }
       if (cr && cr.tries) lines.push(cr.passedOn ? `You passed on ${cr.passedOn}. Tries: ${cr.tries}.` : `Tries so far: ${cr.tries}. Best: ${cr.heard} of ${m.earQuestions} by ear${cr.built ? ', the build done' : ''}${cr.fixed ? ', the fix-it mended' : ''}.`);
     } else {
-      if (!t && ls.fixIt) lines.push(`Something in this patch is broken. Press ${M('Start fix-it')} to load it and start the clock, then play it, listen, and follow the cables to find what is wrong. The goals below say what the mended sound must do. Hints are here if you need them, at a point each, and ${M('Give up')} unlocks Show me.`);
+      if (!t && ls.songFix) lines.push(`Something in the demo song is broken. Open the demo song (${M('New song…')} > ${M('Demo song')}; save your own song first), then press ${M('Start fix-it')} to break it and start the clock. Play it, listen, and mend it here on the Song tab. The goals below say what the mended song must do. Hints are here if you need them, at a point each, and ${M('Give up')} unlocks Show me. Your patch is left as it is.`);
+      else if (!t && ls.fixIt) lines.push(`Something in this patch is broken. Press ${M('Start fix-it')} to load it and start the clock, then play it, listen, and follow the cables to find what is wrong. The goals below say what the mended sound must do. Hints are here if you need them, at a point each, and ${M('Give up')} unlocks Show me.`);
       else if (!t) lines.push(`No steps to follow this time: only the goal above, and what the finished sound must do. Press ${M('Start challenge')} to clear the rack and start the clock. Hints are here if you need them, at a point each, and ${M('Give up')} unlocks Show me.`);
       for (let i = 0; t && i < attempt.hints && i < ls.hints.length; i++) lines.push(`${M(`Hint ${i + 1}.`)} ${ls.hints[i]}`);
       if (passed) lines.push(`${M(ls.fixIt ? 'Fixed' : 'Passed')} in ${clockText(attempt.seconds)} with ${pointsText(score())}.`);
@@ -9258,6 +9478,7 @@ registerProcessor('patch-school', Proc);`;
     for (const k of Object.keys(quizPicks)) delete quizPicks[k];
     for (const k of Object.keys(results)) delete results[k];
     for (const k of Object.keys(checkRecs)) delete checkRecs[k];
+    for (const k of Object.keys(selfScores)) delete selfScores[k];
     attempt = null;
     save(); renderLesson();
     if ($('#courseMap').open) renderCourseMap();
@@ -9322,7 +9543,7 @@ registerProcessor('patch-school', Proc);`;
     const current = ls.steps.findIndex((_, k) => !done.has(k));
     box.append(h('ol', { class: 'steps' }, ls.steps.map((st, k) => {
       const li = h('li', { class: done.has(k) ? 'done' : k === current && started[ls.id] ? 'current' : null });
-      const tag = st.quiz ? 'quiz' : st.manual ? (WHERE[st.where] || 'in the plugin') : null;
+      const tag = st.quiz ? 'quiz' : st.score ? 'score' : st.manual ? (WHERE[st.where] || 'in the plugin') : null;
       const bodyId = `step-${ls.id}-${k}`;
       const title = h('button', { type: 'button', class: 'step-title', 'aria-controls': bodyId, onclick: () => { const open = !stepShown(li); li.classList.toggle('open', open); li.classList.toggle('shut', !open); title.setAttribute('aria-expanded', String(open)); } }, h('span', {}, st.t), tag ? h('span', { class: 'plugin-only' }, tag) : null);
       const body = h('div', { class: 'step-body', id: bodyId });
@@ -9333,6 +9554,12 @@ registerProcessor('patch-school', Proc);`;
           onclick: () => { quizPicks[key] = i; started[ls.id] = true; if (i === st.quiz.answer && markDone(ls.id, k)) toast(lessonDone(ls) ? `Lesson ${ls.short} done.` : 'Right.'); renderLesson(); }
         }, c))));
         if (picked !== undefined) body.append(h('p', { class: 'hint why' }, (picked === st.quiz.answer ? 'Right. ' : 'Not quite: try another. ') + (picked === st.quiz.answer ? st.quiz.why : '')));
+      } else if (st.score) {
+        const v = (selfScores[ls.id] || [])[k] ?? -1, verdict = sheetVerdict(ls);
+        body.append(h('p', { html: st.h }), h('div', { class: 'quiz score', role: 'group', 'aria-label': st.t }, st.score.map((c, i) => h('button', {
+          type: 'button', class: v === i ? 'right' : null, 'aria-pressed': String(v === i), onclick: () => scoreLine(ls, k, i), html: c
+        }))));
+        if (v >= 0) body.append(h('p', { class: 'hint why' }, verdict || `Scored ${v}.`));
       } else {
         const tools = h('div', { class: 'step-tools' });
         if (st.manual) tools.append(h('button', { type: 'button', class: 'btn small', onclick: () => { started[ls.id] = true; markDone(ls.id, k); renderLesson(); } }, done.has(k) ? 'Done' : 'Mark as done'));
