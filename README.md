@@ -48,6 +48,12 @@ The address names what to show: `#lab`, `#chords`, `#song`, `#modules`, `#glossa
 
 The Glossary tab is the plugin's Help > Eurorack glossary: the words on hardware panels and in manuals (CV, gate, 1 V/oct, normalled, LPG, EOC...), then what each module is called on a Eurorack panel, grouped like Every module, with a search box. Each card on Every module and each module's ? help also has its "In Eurorack" line. Both come from the plugin's EurorackNames.cpp, which names generic kinds of module only, never a maker.
 
+Lessons point into it. A word the plugin's lessons mark `[g:gate]` (Level 1 has them throughout) becomes `<span class="g">` in `gen.py` (hand-written lessons use `G('gates')`): underlined in the accent, its entry shows when you rest the mouse on it or Tab to it, and a click or Enter opens it in the Glossary tab (Back returns to the lesson). `glossaryFor()` finds the entry the way the plugin's `ModuleLibrary::findGlossary` does (any case, a plural or "-ed" dropped, one of an entry's names, and `GLOSSARY_ALIASES` such as envelope for EG), so keep the two in step.
+
+## Presets like this
+
+Each Part 4 recipe names the factory presets built the same way (the plugin's `Lesson::presets`, `presets` in the course): How it works ends with a "Presets like this" line, and the preset search (Ctrl+P) tags each of them with its lesson ("Lesson 4.1"); typing "lesson" lists them all. The core recipes (4.1 to 4.4) and 6.2 end with a Save its patch sheet step, which the lab marks as one for the synth, as it has no patch sheets.
+
 ## Song mode and the Track editor
 
 The Song mode tab is a small copy of the standalone app's Song page: up to 8 tracks, each with 8 patterns (loops of 1, 2, 4 or 8 bars, notes in beats as `[start, note, length, velocity]`), a 128-bar arranger (a pattern run plays from its first bar and loops), a mixer with a Master level and meter, and 4 automation lanes a track. Each track has a Track editor like the plugin's: a piano roll (or a drum grid with the Drum Kit's names), grid, velocity, key with Show key and Snap to key, and chord pads with Triads/7ths and a Shape (Smooth keeps the voicing close to the chord before). The chord names of what's written show along the top. My songs keeps named songs in this browser, and Export WAV renders the song through fresh copies of the synths, named after the song.
