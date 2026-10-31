@@ -8291,11 +8291,11 @@ registerProcessor('patch-school', Proc);`;
   // with how many lessons each has, to say what Pro adds.
   const PRO_PARTS = {
     8: ['Sound designer (Level 2)', 'Modulation as a design skill, sound briefs built by ear, harder fix-its and ear tests, and the Level 2 check.', 28],
-    9: ['Track maker (Level 3)', 'Mixing your own song (gain, low end, space), then Capstone A: an original track of your own.', 4],
-    10: ['Beyond the app (Level 4)', 'Hardware words and habits: volts and 1 V per octave, gates and triggers, attenuverters, normalled jacks, panel names, planning a first case, patch sheets and hardware rules.', 16],
-    11: ['Generative patching (Level 4)', 'Clocks that drift, random with memory, chance and Euclid, and Capstone C: a piece that plays itself.', 5],
+    9: ['Track maker (Level 3)', 'Mixing your own song (gain, low end, space), mix tasks on a supplied song, Capstone A: an original track of your own, and the Level 3 check.', 9],
+    10: ['Beyond the app (Level 4)', 'Hardware words and habits: volts and 1 V per octave, gates and triggers, attenuverters, normalled jacks, panel names, planning a first case, patch sheets, hardware rules and hardware fix-its.', 20],
+    11: ['Generative patching (Level 4)', 'Clocks that drift, random with memory, chance and Euclid, and Capstone C: a piece that plays itself.', 7],
     12: ['West Coast and feedback (Level 4)', 'The Buchla way: complex oscillators, low-pass gates, wavefolding, a Krell patch and feedback loops.', 4],
-    13: ['Performance (Level 4)', 'Macros with a job each, MIDI learn, scenes and a four-minute plan, a live take, Capstone B: a performance, and the Level 4 check.', 6]
+    13: ['Performance (Level 4)', 'Macros with a job each, MIDI learn, scenes and a four-minute plan, a live take, Capstone B: a performance, and the Level 4 check.', 7]
   };
   // Your path: the course as one story, in the plugin's five stretches
   // (Lessons::path()). Level 1 is Parts 1 to 3; Parts 4 to 7 put it to work,
@@ -8311,12 +8311,12 @@ registerProcessor('patch-school', Proc);`;
     { name: 'Level 2: Sound designer (Pro)', parts: [8], pro: [27, 370],
       about: 'Modulation as a design skill, sound briefs built by ear, harder fix-its and ear tests.',
       proves: 'the Level 2 check: build two sounds to a client’s brief by ear, mend a patch with two faults and name fifteen sounds, in thirty minutes.' },
-    { name: 'Level 3: Track maker (Pro)', parts: [9], pro: [4, 270],
-      about: 'Mixing a song of your own: gain, low end and space.',
-      proves: 'Capstone A: an original track of your own, scored on eight lines.' },
-    { name: 'Level 4: Beyond the app (Pro)', parts: [10, 11, 12, 13], pro: [31, 567],
+    { name: 'Level 3: Track maker (Pro)', parts: [9], pro: [9, 340],
+      about: 'Mixing a song of your own: gain, low end and space, then mix tasks on a supplied song and Capstone A, an original track of your own, scored on eight lines.',
+      proves: 'the Level 3 check: mix a supplied four-track song (every part heard, a clear low end, parts placed, under the ceiling) and answer eight mixing questions, in twenty-five minutes.' },
+    { name: 'Level 4: Beyond the app (Pro)', parts: [10, 11, 12, 13], pro: [38, 652],
       about: 'Hardware and Eurorack volts, generative patching, West Coast synthesis and performance.',
-      proves: 'the Level 4 check: build from a hardware patch sheet and under a hardware rule, and answer ten hardware questions, in twenty-five minutes. Capstones C and B, a piece that plays itself and a performance, show the rest.' }
+      proves: 'the Level 4 check: build from a hardware patch sheet, under a hardware rule and a patch that plays itself or performs, mend a hardware fault and answer ten hardware questions, in forty minutes. Capstones C and B show the rest.' }
   ];
   // The Patch School Pro page, once it is up (empty: no link, "goes on sale soon").
   const PRO_URL = '';
@@ -8335,7 +8335,7 @@ registerProcessor('patch-school', Proc);`;
   // The "What's next" card, once a lesson that ends a stretch of the free
   // course is done (the plugin's Lessons::whatsNext, less Today's five and
   // Tune-up, which are in the app).
-  const PRO_LEVELS = 'Level 2, Sound designer: modulation as a design skill, sound briefs matched by ear and the Level 2 check. Level 3, Track maker: mixing a song of your own, then Capstone A, an original track. Level 4: hardware and Eurorack volts, generative patching, West Coast synthesis and performance, then the Level 4 check.';
+  const PRO_LEVELS = 'Level 2, Sound designer: modulation as a design skill, sound briefs matched by ear and the Level 2 check. Level 3, Track maker: mixing a song of your own, Capstone A, an original track, and the Level 3 check. Level 4: hardware and Eurorack volts, generative patching, West Coast synthesis and performance, then the Level 4 check.';
   function whatsNext(ls) {
     if (ls.id === 'm_level1') return ['<b>Level 1 passed.</b> The rest of the free course puts it to work: Part 4’s first four sound recipes and their challenges, Part 5, from patch to track, and Part 6, a whole lofi track of your own, scored the way a capstone is. Part 4’s other recipes are optional: take any whenever you like.',
       'After the free course, Patch School Pro, in the Patch School app, goes on. ' + PRO_LEVELS];
