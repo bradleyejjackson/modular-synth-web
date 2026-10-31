@@ -172,6 +172,13 @@ dialog.course::backdrop { background: rgba(0, 0, 0, .45); }
 .course-part a:hover, .course-part a:focus-visible { border-color: var(--line); background: var(--bg); }
 .course-part a[aria-current="true"] { border-color: var(--accent); }
 .course-part a .n { font: 500 12px var(--mono); color: var(--muted); min-width: 2.6em; }
+.course-part.pro { opacity: .62; }
+.course-part.pro h3 { color: var(--muted); }
+.course-level { margin: 0; font-size: 13px; color: var(--muted); }
+.course-level b { color: var(--ink); }
+.next-card { border: 1px solid var(--accent); border-radius: 8px; background: var(--bg); padding: 10px 12px; display: grid; gap: 8px; }
+.next-card h3 { margin: 0; font-size: 15px; }
+.next-card p { margin: 0; }
 .course-part a .st { margin-left: auto; font: 500 12px var(--mono); color: var(--muted); white-space: nowrap; }
 .course-part a .st.done { color: var(--ok); }
 .course-foot { border-top: 1px solid var(--line); padding: 12px 16px; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
@@ -8118,6 +8125,56 @@ registerProcessor('patch-school', Proc);`;
     6: ['Your first track', 'A whole lofi track, from the first chord to the exported WAV.'],
     7: ['Module workshops (optional)', 'One short lesson per family of modules the course doesn’t reach. Pick any, in any order.']
   };
+  // Patch School Pro's parts (Levels 2 to 4), as in the plugin's parts():
+  // the web course is the free one, so the Course map lists them greyed,
+  // with how many lessons each has, to say what Pro adds.
+  const PRO_PARTS = {
+    8: ['Sound designer (Level 2)', 'Modulation as a design skill, sound briefs built by ear, harder fix-its and ear tests, and the Level 2 check.', 28],
+    9: ['Track maker (Level 3)', 'Mixing your own song (gain, low end, space), then Capstone A: an original track of your own.', 4],
+    10: ['Beyond the app (Level 4)', 'Hardware words and habits: volts and 1 V per octave, gates and triggers, attenuverters, normalled jacks, panel names, planning a first case, patch sheets and hardware rules.', 16],
+    11: ['Generative patching (Level 4)', 'Clocks that drift, random with memory, chance and Euclid, and Capstone C: a piece that plays itself.', 5],
+    12: ['West Coast and feedback (Level 4)', 'The Buchla way: complex oscillators, low-pass gates, wavefolding, a Krell patch and feedback loops.', 4],
+    13: ['Performance (Level 4)', 'Macros with a job each, MIDI learn, scenes and a four-minute plan, a live take, Capstone B: a performance, and the Level 4 check.', 6]
+  };
+  // The Patch School Pro page, once it is up (empty: no link, "goes on sale soon").
+  const PRO_URL = '';
+  // About how long a lesson takes, in minutes: the same rule as the plugin's
+  // Lessons::minutesFor (a reading 5, a check its clock and 5, an ear test a
+  // minute a question and 2, a challenge or fix-it 10, a guided lesson about
+  // two minutes a step, to the nearest five).
+  function lessonMinutes(l) {
+    if (l.info) return 5;
+    if (l.mastery) return l.mastery.minutes + 5;
+    if (l.ear) return l.steps.length + 2;
+    if (l.challenge) return 10;
+    return Math.max(5, Math.floor((l.steps.length * 2 + 2) / 5) * 5);
+  }
+  const durationText = (m) => m < 60 ? `${m} min` : `about ${Math.round(m / 30) / 2} h`;
+  // The "What's next" card, once a lesson that ends a stretch of the free
+  // course is done (the plugin's Lessons::whatsNext, less Today's five and
+  // Tune-up, which are in the app).
+  const PRO_LEVELS = 'Level 2, Sound designer: modulation as a design skill, sound briefs matched by ear and the Level 2 check. Level 3, Track maker: mixing a song of your own, then Capstone A, an original track. Level 4: hardware and Eurorack volts, generative patching, West Coast synthesis and performance, then the Level 4 check.';
+  function whatsNext(ls) {
+    if (ls.id === 'm_level1') return ['<b>Level 1 passed.</b> The rest of the free course puts it to work: Part 4’s sound recipes, Part 5, from patch to track, and Part 6, a whole lofi track of your own.',
+      'After the free course, Patch School Pro, in the Patch School app, goes on. ' + PRO_LEVELS];
+    if (ls.id === 'p6_mix') return ['<b>Your first track is done,</b> and with it the free course’s lessons. Part 7’s module workshops are extras: one short lesson per family of modules the course doesn’t reach, in any order.',
+      'Patch School Pro, in the Patch School app, goes on from here. ' + PRO_LEVELS];
+    return null;
+  }
+  function proLink() {
+    return PRO_URL ? h('a', { class: 'btn small', href: PRO_URL, target: '_blank', rel: 'noopener' }, 'Learn about Pro')
+                   : h('span', { class: 'hint' }, 'Pro goes on sale soon.');
+  }
+  function nextCard(ls) {
+    const words = whatsNext(ls);
+    if (!words || !lessonDone(ls) || running(ls)) return null;
+    const first = LESSONS.find((l) => l.part === 7);
+    const pick = (l) => { const d = $('#courseMap'); if (d.open) d.close(); if (l) pickLesson(l); };
+    const go = ls.id === 'p6_mix' && first ? h('button', { type: 'button', class: 'btn small', onclick: () => pick(first) }, 'The workshops')
+      : h('button', { type: 'button', class: 'btn small', onclick: () => pick(LESSONS.find((l) => !l.info && !lessonDone(l) && l.part !== 7)) }, 'Continue');
+    return h('section', { class: 'next-card', 'aria-label': 'What’s next' }, h('h3', {}, 'What’s next'), words.map((w) => h('p', { html: w })),
+      h('div', { class: 'step-tools' }, go, proLink()));
+  }
   // Bradley's welcome video for each part, as in the plugin's
   // Source/lessons/WelcomeVideos.h. The first lesson of a part links to its
   // video once the address is filled in; an empty one shows nothing.
@@ -9159,15 +9216,24 @@ registerProcessor('patch-school', Proc);`;
       h('div', { class: 'course-body' }, Object.entries(PARTS).map(([p, [name, blurb]]) => {
         const list = LESSONS.filter((l) => l.part === +p), [done, of] = courseCount(list);
         return h('section', { class: 'course-part', 'aria-label': `Part ${p}: ${name}` },
-          h('h3', {}, `Part ${p}: ${name}`, h('span', {}, `${done} of ${of} done`)),
+          h('h3', {}, `Part ${p}: ${name}`, h('span', {}, `${done} of ${of} done · ${durationText(list.reduce((t, l) => t + lessonMinutes(l), 0))}`)),
           h('div', { class: 'progress', 'aria-hidden': 'true' }, h('i', { style: `width:${of ? 100 * done / of : 0}%` })),
           h('p', { class: 'hint', style: 'margin:0 0 6px' }, blurb),
           h('ol', {}, list.map((l) => {
             const st = l.info ? '' : lessonDone(l) ? '✓ done' : started[l.id] ? `${stepsDone(l)} of ${l.steps.length}` : '';
             return h('li', {}, h('a', { href: lessonHash(l), 'aria-current': l.id === activeLesson ? 'true' : null, onclick: close },
-              h('span', { class: 'n' }, l.num), h('span', {}, l.title), st ? h('span', { class: 'st' + (lessonDone(l) ? ' done' : '') }, st) : null));
+              h('span', { class: 'n' }, l.num), h('span', {}, l.title), h('span', { class: 'st' + (lessonDone(l) ? ' done' : '') }, st || `${lessonMinutes(l)} min`)));
           })));
-      })),
+      }),
+      // Levels 2 to 4: Pro, in the app. Greyed, to say what comes after the free course.
+      h('section', { class: 'course-part', 'aria-label': 'Levels 2 to 4: Patch School Pro' },
+        h('h3', {}, 'Levels 2 to 4: Patch School Pro', h('span', {}, 'in the app')),
+        h('p', { class: 'hint', style: 'margin:0 0 6px' }, 'After the free course, Pro goes on in the Patch School app, with a check at the end of each level and three capstones.'),
+        proLink()),
+      Object.entries(PRO_PARTS).map(([p, [name, blurb, count]]) => h('section', { class: 'course-part pro', 'aria-label': `Part ${p}: ${name}, Pro` },
+        h('h3', {}, `Part ${p}: ${name}`, h('span', {}, `${count} lessons · Pro`)),
+        h('p', { class: 'hint', style: 'margin:0' }, blurb))),
+      LESSONS.filter((l) => whatsNext(l) && lessonDone(l)).length ? nextCard(LESSONS.filter((l) => whatsNext(l) && lessonDone(l)).pop()) : null),
       h('div', { class: 'course-foot' },
         accountBox(),
         h('button', { type: 'button', class: 'btn small', onclick: resetProgress }, 'Reset my progress')));
@@ -9232,6 +9298,8 @@ registerProcessor('patch-school', Proc);`;
     if (ls.info) { box.append(infoBlock()); return; }
     if (isGoals(ls) || ls.ear) {
       if (ls.ear && ls.how && ls.how.length) box.append(h('details', { class: 'how', open: trying(ls) ? null : '' }, h('summary', {}, 'What to listen for'), ls.how.map((p) => h('p', { html: p }))));
+      const card = nextCard(ls);
+      if (card) box.append(card);
       renderGoals(box, ls);
       return;
     }
@@ -9272,6 +9340,8 @@ registerProcessor('patch-school', Proc);`;
       title.setAttribute('aria-expanded', String(stepShown(li)));
       return li;
     })));
+    const card = nextCard(ls);
+    if (card) box.append(card);
   }
   // The page is one file with nothing else to fetch (only the fonts fall back
   // to the computer's own), so a saved copy works offline.
