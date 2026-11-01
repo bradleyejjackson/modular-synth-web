@@ -9369,7 +9369,7 @@ registerProcessor('patch-school', Proc);`;
 
   // Hear the target: build the step's finished patch, hold middle C for
   // 2.5 s like the plugin does, then put the rack back.
-  async function hearTarget(ls, k) {
+  async function hearTarget(ls, k, says) {
     if (previewing) return;
     const keep = JSON.stringify(lab);
     previewing = true;
@@ -9377,12 +9377,17 @@ registerProcessor('patch-school', Proc);`;
     freshRack(ls.outAt);
     for (let j = 0; j <= k; j++) if (isTask(ls.steps[j])) ls.steps[j].apply();
     changed(true);
-    toast('Playing the target sound…');
+    toast(says || 'Playing the target sound…');
     await new Promise((r) => setTimeout(r, 60));
     await noteOn(60, 0.8);
     setTimeout(() => noteOff(60), 2500);
     setTimeout(() => { stopAllKeys(); const back = JSON.parse(keep); lab = back; previewing = false; changed(true); }, 5300);
   }
+
+  // Hear the finished patch, on each Part 4 recipe: every step's Show me,
+  // played like Hear the target, then the rack put back as it was.
+  const hearsFinished = (ls) => ls.part === 4 && !ls.challenge && !ls.tab && !ls.info && ls.steps.some(isTask);
+  const hearFinished = (ls) => hearTarget(ls, ls.steps.length - 1, 'Playing the finished patch: the sound this lesson builds. Your rack is left as it is.');
 
   // ---------- lesson panel ----------
   const doneSet = (lid) => new Set(progress[lid] || []);
@@ -9747,6 +9752,8 @@ registerProcessor('patch-school', Proc);`;
     const video = WELCOME_VIDEOS[ls.part];
     if (video && (at === 0 || LESSONS[at - 1].part !== ls.part))
       box.append(h('p', {}, h('a', { class: 'btn small', href: video, target: '_blank', rel: 'noopener' }, `Watch: welcome to Part ${ls.part} (2 min)`)));
+    if (hearsFinished(ls))
+      box.append(h('p', {}, h('button', { type: 'button', class: 'btn small', title: 'Play what this lesson builds, with middle C held for a moment. Your rack is left as it is.', onclick: () => hearFinished(ls) }, 'Hear the finished patch')));
     if (ls.info) { box.append(infoBlock()); return; }
     if (isGoals(ls) || ls.ear) {
       if (ls.ear && ls.how && ls.how.length) box.append(h('details', { class: 'how', open: trying(ls) ? null : '' }, h('summary', {}, 'What to listen for'), ls.how.map((p) => h('p', { html: p }))));
@@ -9759,7 +9766,7 @@ registerProcessor('patch-school', Proc);`;
     const done = doneSet(ls.id), count = ls.steps.filter((_, k) => done.has(k)).length;
     box.append(h('div', { class: 'lesson-actions' },
       h('button', { type: 'button', class: 'btn' + (started[ls.id] ? '' : ' primary'), onclick: () => startLesson(ls) }, started[ls.id] ? 'Start again' : 'Start lesson'),
-      h('button', { type: 'button', class: 'btn', onclick: () => finished(ls) }, ls.tab ? 'Do every step for me' : 'Hear the finished patch')));
+      h('button', { type: 'button', class: 'btn', title: ls.tab ? null : 'Build every step in your rack and tick them, so you can play the finished patch yourself', onclick: () => finished(ls) }, ls.tab ? 'Do every step for me' : 'Load the finished patch')));
     const bar = h('div', { class: 'progress', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': ls.steps.length, 'aria-valuenow': count, 'aria-label': 'Lesson progress' }, h('i', { style: `width:${100 * count / ls.steps.length}%` }));
     box.append(bar);
     const real = ls.steps.filter((st) => !st.quiz), here = real.filter((st) => !st.manual).length;
