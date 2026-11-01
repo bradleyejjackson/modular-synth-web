@@ -7149,7 +7149,10 @@ registerProcessor('patch-school', Proc);`;
           apply: () => { L.link('env', 'out', 'flt', 'cv1'); L.set('flt', { cv1Amount: 3 }); } },
         { t: 'Tune the envelope', h: `Turn ${M('Attack')} up for a slow swell, ${M('Decay')} and ${M('Sustain')} down for a pluck, or ${M('Release')} up for a tail after you let go. This step ticks when you have tried one of them.`,
           check: () => L.any('envelope', (p) => p.attack >= 0.3 || p.sustain <= 0.15 || p.release >= 1),
-          apply: () => L.set('env', { attack: 0.5, release: 1.5 }) }
+          apply: () => L.set('env', { attack: 0.5, release: 1.5 }) },
+        { t: 'Match this sound', h: `Press ${M('Hear the target')} to hear a mystery sound: this patch with its Envelope set another way. Set the Envelope's ${M('Attack')} and ${M('Release')} to match it. Does it start at once or fade in? Does it stop when you let go, or ring on? Show me gives the answer.`,
+          check: () => L.any('envelope', (p) => p.attack <= 0.05 && p.release <= 0.5),
+          apply: () => L.set('env', { attack: 0.005, release: 0.3 }), listen: true }
       ]
     },
     {
@@ -7166,7 +7169,10 @@ registerProcessor('patch-school', Proc);`;
           apply: () => { L.drop('ks', 'karplus'); L.ensure('osc', 'oscillator', X(1), Y(0), { wave: 3 }); L.ensure('lpg', 'lowPassGate', X(2), Y(0)); L.link('midi', 'pitch', 'osc', 'pitch'); L.link('osc', 'out', 'lpg', 'in'); L.link('midi', 'gate', 'lpg', 'ping'); L.link('lpg', 'out', 'out', 'left'); } },
         { t: 'Shape the mallet', h: `Ping flashes the gate open and lets it fade, getting darker as it gets quieter, like a real mallet. Change ${M('Decay')} to set the fade; try 0.8 s for a kalimba-like ring.`,
           check: () => L.any('lowPassGate', (p) => Math.abs(p.decay - 0.4) > 0.1),
-          apply: () => L.set('lpg', { decay: 0.8 }) }
+          apply: () => L.set('lpg', { decay: 0.8 }) },
+        { t: 'Match this sound', h: `Press ${M('Hear the target')}, then match the mallet with the Low-Pass Gate's ${M('Decay')} and ${M('Resonance')}. Is it a short knock or a ringing note? Does it have a hollow, woody ping?`,
+          check: () => L.any('lowPassGate', (p) => p.decay <= 0.3 && p.resonance >= 0.55),
+          apply: () => L.set('lpg', { decay: 0.15, resonance: 0.7 }), listen: true }
       ]
     },
     {
@@ -7184,7 +7190,10 @@ registerProcessor('patch-school', Proc);`;
         { t: 'Move a second thing', h: `Add ${M('Multimode Filter')} after the Wavetable: Wavetable ${O('Out')} to its ${I('In')}, its ${O('Out')} to VCA ${I('In')}. Patch Chaos ${O('Y')} into its ${I('CV 1')} with ${M('CV 1 amt')} at 1.5 oct. Two parts of the sound now move on their own.`,
           check: () => L.cab('wavetable', 'out', 'multimode', 'in') && L.cab('multimode', 'out', 'vca', 'in') && L.cab('chaos', 'y', 'multimode', 'cv1') && L.any('multimode', (p) => p.cv1Amount >= 1),
           apply: () => { L.ensure('mm', 'multimode', X(2), Y(0), { cv1Amount: 1.5 }); L.link('wt', 'out', 'mm', 'in'); L.link('mm', 'out', 'vca', 'in'); L.link('chaos', 'y', 'mm', 'cv1'); } },
-        { t: 'Thicken it with Unison', manual: true, h: `In the plugin, set ${M('Unison')} to 3 under ${M('Synth settings')} for a wide, thick pad. This lab has no Synth settings, so tick this step when you have tried it.` }
+        { t: 'Thicken it with Unison', manual: true, h: `In the plugin, set ${M('Unison')} to 3 under ${M('Synth settings')} for a wide, thick pad. This lab has no Synth settings, so tick this step when you have tried it.` },
+        { t: 'Match this sound', h: `Press ${M('Hear the target')}, then match its movement with the Chaos module's ${M('Rate')} and the Multimode Filter's ${M('Resonance')}. Does it drift slowly or flutter? Does the filter whistle?`,
+          check: () => L.any('chaos', (p) => p.rate >= 2.5) && L.any('multimode', (p) => p.resonance >= 0.6),
+          apply: () => { L.set('chaos', { rate: 4 }); L.set('mm', { resonance: 0.75 }); }, listen: true }
       ]
     },
     {
@@ -7205,7 +7214,10 @@ registerProcessor('patch-school', Proc);`;
         { t: 'Stop when you let go', h: `The drums never stop, even after you let go. To play them only while a key is held, put a ${M('Logic')} module between each Euclidean and its drum: ${O('Hits')} into ${I('A')}, MIDI In ${O('Gate')} into ${I('B')}, and ${O('AND')} into the drum. Turn Hold keys off to hear it stop.`,
           check: () => L.ncab('euclidean', 'hits', 'logic', 'a') >= 3 && L.ncab('midiIn', 'gate', 'logic', 'b') >= 3 && ['kick', 'snare', 'hiHat'].every((d) => L.cab('logic', 'and', d, 'trigger')),
           apply: () => { [['e1', 'kick', 'g1'], ['e2', 'snare', 'g2'], ['e3', 'hiHat', 'g3']].forEach(([e, d, g], r) => { L.ensure(g, 'logic', X(2), Y(r)); L.link(e, 'hits', g, 'a'); L.link('midi', 'gate', g, 'b'); L.link(g, 'and', d, 'trigger'); }); } },
-        { t: 'Find new grooves', manual: true, h: `Change Hits and Rotate while it plays, and try the Tempo slider. In the plugin the Clock follows Ableton’s tempo once you press Play. The ${M('Euclidean Drums')} preset is this patch, finished.` }
+        { t: 'Find new grooves', manual: true, h: `Change Hits and Rotate while it plays, and try the Tempo slider. In the plugin the Clock follows Ableton’s tempo once you press Play. The ${M('Euclidean Drums')} preset is this patch, finished.` },
+        { t: 'Match this sound', h: `Press ${M('Hear the target')}, then match the hats and the snare with the Hi-Hat's ${M('Decay')} and the Snare's ${M('Tune')}. Are the hats closed ticks or open hisses? Is the snare low and fat, or high and tight?`,
+          check: () => L.any('hiHat', (p) => p.decay >= 0.3) && L.any('snare', (p) => p.tune >= 260),
+          apply: () => { L.set('hiHat', { decay: 0.45 }); L.set('snare', { tune: 300 }); }, listen: true }
       ]
     },
     {
@@ -7229,7 +7241,10 @@ registerProcessor('patch-school', Proc);`;
           apply: () => { L.ensure('dly', 'delayFx', X(5), Y(0) - 8, { sync: 6, pingPong: 1 }); L.link('vca', 'out', 'dly', 'in'); L.link('dly', 'left', 'out', 'left'); L.link('dly', 'right', 'out', 'right'); } },
         { t: 'Skip some notes', h: `Patch Random ${O('Chance gate')} into the Envelope ${I('Gate')} instead of the Clock (unplug the Clock ${O('Gate')} cable), and set ${M('Chance')} to about 0.6. Now roughly 4 notes in 10 are skipped at random; lower Chance skips more. The melody only plays while a key is down, so turn on ${M('Hold keys')} and it keeps going on its own. Press Silence to stop it.`,
           check: () => L.any('random', (p) => p.chance <= 0.8) && L.cab('random', 'chance', 'envelope', 'gate') && !L.cab('clock', 'gate', 'envelope', 'gate'),
-          apply: () => { L.set('rnd', { chance: 0.6 }); const c = lab.cables.find((x) => typeOf(x.f) === 'clock' && x.fo === 'gate' && typeOf(x.t) === 'envelope'); if (c) lab.cables = lab.cables.filter((x) => x !== c); L.link('rnd', 'chance', 'env', 'gate'); } }
+          apply: () => { L.set('rnd', { chance: 0.6 }); const c = lab.cables.find((x) => typeOf(x.f) === 'clock' && x.fo === 'gate' && typeOf(x.t) === 'envelope'); if (c) lab.cables = lab.cables.filter((x) => x !== c); L.link('rnd', 'chance', 'env', 'gate'); } },
+        { t: 'Match this sound', h: `Press ${M('Hear the target')}, then match it with the Clock's ${M('Rate')} and the Delay's ${M('Feedback')}. Are the notes faster or slower than yours? Do the echoes die away quickly or keep going?`,
+          check: () => L.any('clock', (p) => Math.round(p.rate) === 7) && L.any('delayFx', (p) => p.feedback >= 0.6),
+          apply: () => { L.set('clk', { rate: 7 }); L.set('dly', { feedback: 0.7 }); }, listen: true }
       ]
     },
     {
@@ -7247,7 +7262,10 @@ registerProcessor('patch-school', Proc);`;
         { t: 'Put a knob on it', h: `Add ${M('Macros')} (Inputs &amp; output) and patch ${O('Macro 1')} into the pad filter’s ${I('CV 1')} with ${M('CV 1 amt')} at 4 oct. Move the Macro 1 slider on the Macros module: it sweeps the filter.`,
           check: () => (L.cab('macros', 'm1', 'multimode', 'cv1') && L.any('multimode', (p) => p.cv1Amount >= 3)) || (L.cab('macros', 'm1', 'filter', 'cv1') && L.any('filter', (p) => p.cv1Amount >= 3)),
           apply: () => { L.ensure('mac', 'macros', X(2), Y(1) + 40); L.link('mac', 'm1', 'mm', 'cv1'); L.set('mm', { cv1Amount: 4 }); } },
-        { t: 'Map it to a knob on your keyboard', manual: true, h: `In Ableton, click the plugin’s ${M('Configure')} button, then turn Macro 1 in the plugin window so it appears in Ableton’s device. Press ${M('Ctrl+M')}, click it, and turn a knob on your MIDI keyboard to map it. Press Ctrl+M again: that knob now sweeps the filter.` }
+        { t: 'Map it to a knob on your keyboard', manual: true, h: `In Ableton, click the plugin’s ${M('Configure')} button, then turn Macro 1 in the plugin window so it appears in Ableton’s device. Press ${M('Ctrl+M')}, click it, and turn a knob on your MIDI keyboard to map it. Press Ctrl+M again: that knob now sweeps the filter.` },
+        { t: 'Match this sound', h: `Press ${M('Hear the target')}, then match its pumping with the Compressor's ${M('Threshold')} and ${M('Release')}. How deep does the pad duck on each kick? How slowly does it swell back?`,
+          check: () => L.any('compressor', (p) => p.threshold <= -40 && p.release >= 300),
+          apply: () => L.set('comp', { threshold: -45, release: 450 }), listen: true }
       ]
     },
     {
@@ -7268,7 +7286,10 @@ registerProcessor('patch-school', Proc);`;
         { t: 'Send and Return', h: `A ${M('Send')} adds a share of its input to one of four buses, like the aux send on a mixing desk, and a ${M('Return')} (always shared) brings the bus back. Put a Send between the VCA and the reverb: VCA ${O('Out')} to Send ${I('In')}, Send ${O('Out')} to Plate Reverb ${I('Left')}. Then add a Return and ${M('Tape Echo')}: Return ${O('Out')} to Tape Echo ${I('In')}, and Tape Echo ${O('Left')} into the Scope’s ${I('B')} to see the echoes.`,
           check: () => L.cab('vca', 'out', 'send', 'in') && L.cab('send', 'out', 'plateReverb', 'left') && L.cab('return', 'out', 'tapeEcho', 'in'),
           apply: () => { L.ensure('send', 'send', X(3), Y(1) + 140); L.ensure('ret', 'return', X(5), Y(1) + 40); L.ensure('echo', 'tapeEcho', X(5), Y(1) + 200, {}, true); L.link('vca', 'out', 'send', 'in'); L.link('send', 'out', 'rev', 'left'); L.link('ret', 'out', 'echo', 'in'); L.link('echo', 'left', 'scope', 'b'); } },
-        { t: 'Share in the plugin', manual: true, h: `In the plugin, right-click a module’s title and choose ${M('Shared')}. Its title bar turns teal and also shows how much CPU the module uses, so you can spot the heavy ones. Share reverbs, delays and compressors at the end of a patch, and clocks or LFOs that every note should follow in step.` }
+        { t: 'Share in the plugin', manual: true, h: `In the plugin, right-click a module’s title and choose ${M('Shared')}. Its title bar turns teal and also shows how much CPU the module uses, so you can spot the heavy ones. Share reverbs, delays and compressors at the end of a patch, and clocks or LFOs that every note should follow in step.` },
+        { t: 'Match this sound', h: `Press ${M('Hear the target')}, then match its space with the Plate Reverb's ${M('Decay')} and ${M('Mix')}. How long is the tail? How much of what you hear is the room, and how much the pad?`,
+          check: () => L.any('plateReverb', (p) => p.decay >= 0.8 && p.mix >= 0.5),
+          apply: () => L.set('rev', { decay: 0.9, mix: 0.6 }), listen: true }
       ]
     },
     {
@@ -7280,6 +7301,9 @@ registerProcessor('patch-school', Proc);`;
         { t: 'Turn it into a bell', h: `Set ${M('Material')} to Bell and ${M('Decay')} to 4 s or more. Bells ring with partials that are not whole multiples of the note, which is what makes them sound like bells.`,
           check: () => L.any('modalResonator', (p) => p.material === 3 && p.decay >= 3),
           apply: () => L.set('modal', { material: 3, decay: 4.5 }) },
+        { t: 'Match this sound', h: `Press ${M('Hear the target')}, then match it with the Modal Resonator's ${M('Material')} and ${M('Decay')}. Is it a string, a bar, a plate or a bell? How long does it ring?`,
+          check: () => L.any('modalResonator', (p) => Math.round(p.material) === 2 && p.decay <= 2),
+          apply: () => L.set('modal', { material: 2, decay: 1 }), listen: true },
         { t: 'A singing voice', h: `Remove the Modal Resonator and add ${M('Formant Voice')}. Patch MIDI ${O('Pitch')} to its ${I('Pitch')}, ${O('Gate')} to its ${I('Gate')}, and its ${O('Out')} to Output ${I('Left')}. It sings “ah”.`,
           check: () => !L.has('modalResonator') && L.cab('midiIn', 'pitch', 'formantVoice', 'pitch') && L.cab('midiIn', 'gate', 'formantVoice', 'gate') && L.cab('formantVoice', 'out', 'output', 'left'),
           apply: () => { L.drop('modal', 'modalResonator'); L.ensure('voice', 'formantVoice', X(1), Y(0)); L.link('midi', 'pitch', 'voice', 'pitch'); L.link('midi', 'gate', 'voice', 'gate'); L.link('voice', 'out', 'out', 'left'); } },
@@ -7311,7 +7335,10 @@ registerProcessor('patch-school', Proc);`;
           apply: () => L.set('grid', { swing: 0.3 }) },
         { t: 'Change the sounds', h: `Click a pad on the Drum Sampler to pick it, then choose another sound for it, or ${M('Load a file…')} to use your own WAV or MP3 (here it stays until you reload the page). In the plugin you can also drag a file onto the module, and the sound is saved inside the patch.`,
           check: () => L.mods('drumSampler').some((m) => (m.clips || []).some((c, k) => c !== DRUM_SOUNDS[k])),
-          apply: () => { const m = lab.mods.find((q) => q.key === 'ds'); if (m) { m.clips[2] = 'Rim'; sendClip(m, 2); } } }
+          apply: () => { const m = lab.mods.find((q) => q.key === 'ds'); if (m) { m.clips[2] = 'Rim'; sendClip(m, 2); } } },
+        { t: 'Match this sound', h: `Press ${M('Hear the target')}, then match the kit with the Drum Sampler's ${M('Tune')} and ${M('Decay')}. Is it lower or higher than yours? Do the hits ring out or stop short?`,
+          check: () => L.any('drumSampler', (p) => p.tune <= -4 && p.decay <= 0.3),
+          apply: () => L.set('ds', { tune: -7, decay: 0.15 }), listen: true }
       ]
     },
     {
@@ -7326,6 +7353,9 @@ registerProcessor('patch-school', Proc);`;
         { t: 'Smear it into grains', h: `Remove the Sample Player and add ${M('Granular Sampler')}. Patch MIDI ${O('Pitch')} to its ${I('Pitch')} and its ${O('Left')} and ${O('Right')} to the Output, then hold a key and slowly move ${M('Position')}. It plays tiny overlapping slices of the sound.`,
           check: () => !L.has('samplePlayer') && L.cab('midiIn', 'pitch', 'granular', 'pitch') && L.cab('granular', 'left', 'output', 'left'),
           apply: () => { L.drop('sp', 'samplePlayer'); L.ensure('gr', 'granular', X(1), Y(0)); L.link('midi', 'pitch', 'gr', 'pitch'); L.link('gr', 'left', 'out', 'left'); L.link('gr', 'right', 'out', 'right'); } },
+        { t: 'Match this sound', h: `Press ${M('Hear the target')}: the same sound, smeared another way. Match it with the Granular Sampler's ${M('Size')} and ${M('Pitch spread')}. Are the grains long and smooth, or short and buzzy? One pitch, or a cloud of them?`,
+          check: () => L.any('granular', (p) => p.size <= 60 && p.pitchSpread >= 5),
+          apply: () => L.set('gr', { size: 40, pitchSpread: 7 }), listen: true },
         { t: 'Make a synth talk', h: `Above the rack, set ${M('Audio In hears')} to Demo: talking synth (or Your microphone, with headphones on). Remove the Granular Sampler and add ${M('Audio In')}, ${M('Super Saw')} and ${M('Vocoder')}. Patch MIDI ${O('Pitch')} to Super Saw ${I('Pitch')}, Super Saw ${O('Out')} to Vocoder ${I('Carrier')}, Audio In ${O('Left')} to Vocoder ${I('Modulator')}, and Vocoder ${O('Out')} to Output ${I('Left')}. Hold a chord: the chord speaks.`,
           check: () => $('#srcMain').value !== 'off' && L.cab('audioIn', 'left', 'vocoder', 'modulator') && L.cab('superSaw', 'out', 'vocoder', 'carrier') && L.cab('vocoder', 'out', 'output', 'left'),
           apply: () => { if ($('#srcMain').value === 'off') { $('#srcMain').value = 'voice'; send({ t: 'src', src: { main: 'voice', side: $('#srcSide').value } }); } L.drop('gr', 'granular'); L.ensure('ain', 'audioIn', X(1), Y(1)); L.ensure('saw', 'superSaw', X(1), Y(0)); L.ensure('voc', 'vocoder', X(2), Y(0), { level: 0.8 }); L.link('midi', 'pitch', 'saw', 'pitch'); L.link('saw', 'out', 'voc', 'carrier'); L.link('ain', 'left', 'voc', 'modulator'); L.link('voc', 'out', 'out', 'left'); } },
@@ -7401,6 +7431,9 @@ registerProcessor('patch-school', Proc);`;
         { t: 'Check a tuning', h: `Add an ${M('Oscillator')}, patch MIDI ${O('Pitch')} to its ${I('Pitch')} and its ${O('Out')} to the Tuner’s ${I('In')}, and the Tuner’s ${O('Out')} to Output ${I('Left')}. Hold a key: the Tuner names the note. Turn the Oscillator’s ${M('Fine')} knob and watch the cents.`,
           check: () => L.cab('oscillator', 'out', 'tuner', 'in') && L.cab('midiIn', 'pitch', 'oscillator', 'pitch'),
           apply: () => { L.ensure('osc', 'oscillator', X(1), Y(0), { wave: 3 }); L.link('midi', 'pitch', 'osc', 'pitch'); L.link('osc', 'out', 'tuner', 'in'); L.link('tuner', 'out', 'out', 'left'); } },
+        { t: 'Match this sound', h: `Press ${M('Hear the target')}: the same Oscillator, tuned to another note. Turn its ${M('Fine')} knob a semitone at a time until yours sings the same note. The Tuner names each note as you pass it, so you can say which one the target plays.`,
+          check: () => L.any('oscillator', (p) => Math.round(p.octave) === 0 && p.fine >= 6.5 && p.fine <= 7.5),
+          apply: () => L.set('osc', { fine: 7 }), listen: true },
         { t: 'Measure a signal', h: `Add a ${M('Meter')} and patch any output into it, for example the Oscillator. It shows the level in decibels and, for control signals, the lowest and highest values, handy for checking what an LFO really sends. A ${M('Spectrum')} (Scopes &amp; meters) shows a sound’s frequencies as bars (bass on the left), and a ${M('Notes')} module (Utilities) lets you write on the patch itself.`,
           check: () => L.cab('*', '*', 'meter', 'in') || lab.cables.some((c) => typeOf(c.t) === 'meter'),
           apply: () => { L.ensure('meter', 'meter', X(2), Y(0)); L.link('osc', 'out', 'meter', 'in'); } },
